@@ -1,7 +1,14 @@
-/* Home: today at a glance, and the four primary entry points. */
+/* Home: today at a glance, and the primary entry points.
+ *
+ * The tiles are a set the person arranges, so each one is built by id and the
+ * order comes from settings. Nothing here fetches: the sun and air tiles read
+ * the last stored reading, because a summary should never be what puts a
+ * request on the network.
+ */
 
-import { el, eyebrow, panel, tile, ring, button } from '../app/ui.js';
-import { summary, settings } from '../app/store.js';
+import { el, eyebrow, panel, tile, ring, button, reorderable } from '../app/ui.js';
+import { summary, settings, profile } from '../app/store.js';
+import { lastConditions, uvBand, airBand, sunAdvice } from '../app/weather.js';
 
 function greeting() {
   const h = new Date().getHours();
@@ -15,7 +22,30 @@ const dayLabel = () => new Date().toLocaleDateString([], {
   weekday: 'long', month: 'short', day: 'numeric',
 });
 
-export function renderHome(screen, { go }) {
+/* The arrangement someone gets before they move anything. */
+export const DEFAULT_ORDER = ['symptoms', 'water', 'energy', 'meds', 'uv', 'air'];
+
+/**
+ * The order to draw in, given what was saved and what exists now.
+ *
+ * A saved arrangement is from whatever version wrote it, so ids that no longer
+ * exist are dropped and ids added since are appended. Without that, a new tile
+ * would be invisible to anyone who had ever rearranged, and a removed one
+ * would throw.
+ *
+ * @param {unknown} saved
+ * @param {string[]} available
+ */
+export function resolveOrder(saved, available = DEFAULT_ORDER) {
+  const known = new Set(available);
+  const wanted = Array.isArray(saved) && saved.length ? saved : available;
+  const seen = new Set();
+  // A repeated id would otherwise build the same tile twice.
+  const kept = wanted.filter(id => known.has(id) && !seen.has(id) && seen.add(id));
+  return [...kept, ...available.filter(id => !seen.has(id))];
+}
+
+export function renderHome(screen, { go, live }) {
   const s = summary();
 
   screen.appendChild(eyebrow(dayLabel()));
@@ -32,40 +62,26 @@ export function renderHome(screen, { go }) {
   ].forEach(([label, fn]) => quick.appendChild(button(label, 'chipbtn', fn)));
   screen.appendChild(quick);
 
-  /* Summary grid. Every tile is a link to the screen that owns the number. */
-  const grid = el('div', 'grid2');
+  const builders = tileBuilders(s, go);
+  const order = resolveOrder(settings.get().homeOrder, Object.keys(builders));
+
+  const grid = el('div', 'grid2 grid2--arrangeable');
   grid.style.marginBlockStart = 'var(--s-5)';
-
-  const lastText = s.lastSymptom
-    ? (s.lastSymptom.region_label ?? s.lastSymptom.body_region_id ?? 'Logged')
-    : 'Nothing logged';
-  const lastSub = s.lastSymptom
-    ? new Date(s.lastSymptom.at ?? s.lastSymptom.saved_at).toLocaleDateString()
-    : 'Tap to start a scan';
-  grid.appendChild(tile('Symptoms', lastText, lastSub, () => go('#/body')));
-
-  const glasses = Math.round(s.waterMl / 250);
-  const glassGoal = Math.round(s.waterGoalMl / 250);
-  const waterTile = el('button', 'tile2 tile2--ring');
-  waterTile.type = 'button';
-  waterTile.append(eyebrow('Water'), ring(glasses, glassGoal, 'glasses', `${glasses} of ${glassGoal}`));
-  waterTile.addEventListener('click', () => go('#/track/hydration'));
-  grid.appendChild(waterTile);
-
-  const kcalTile = el('button', 'tile2 tile2--ring');
-  kcalTile.type = 'button';
-  kcalTile.append(eyebrow('Energy'), ring(s.kcal, s.kcalGoal, 'kcal', `${s.kcal} of ${s.kcalGoal}`));
-  kcalTile.addEventListener('click', () => go('#/track/diet'));
-  grid.appendChild(kcalTile);
-
-  grid.appendChild(tile(
-    'Medicines',
-    s.medsDue ? `${s.medsDue} due` : 'None due',
-    s.medsDue ? 'Tap to review' : 'Nothing scheduled',
-    () => go('#/track/meds'),
-  ));
-
+  order.forEach(id => {
+    const node = builders[id]();
+    node.dataset.tile = id;
+    grid.appendChild(node);
+  });
   screen.appendChild(grid);
+
+  reorderable(grid, {
+    live,
+    onReorder: ids => settings.set({ homeOrder: ids }),
+    describe: node => node.querySelector('.eyebrow')?.textContent ?? 'Tile',
+  });
+
+  screen.appendChild(el('p', 'hint',
+    'Hold a tile to pick it up, then drag it where you want it.'));
 
   /* The privacy claim belongs on the first screen, stated plainly once. */
   const note = panel(
@@ -89,4 +105,89 @@ export function renderHome(screen, { go }) {
   );
   packs.style.marginBlockStart = 'var(--s-4)';
   screen.appendChild(packs);
+}
+
+/* One builder per tile, keyed by the id the saved order refers to. */
+function tileBuilders(s, go) {
+  return {
+    symptoms: () => {
+      const value = s.lastSymptom
+        ? (s.lastSymptom.region_label ?? s.lastSymptom.body_region_id ?? 'Logged')
+        : 'Nothing logged';
+      const sub = s.lastSymptom
+        ? new Date(s.lastSymptom.at ?? s.lastSymptom.saved_at).toLocaleDateString()
+        : 'Tap to start a scan';
+      return tile('Symptoms', value, sub, () => go('#/body'));
+    },
+
+    water: () => {
+      const glasses = Math.round(s.waterMl / 250);
+      const goal = Math.round(s.waterGoalMl / 250);
+      const t = el('button', 'tile2 tile2--ring');
+      t.type = 'button';
+      t.append(eyebrow('Water'), ring(glasses, goal, 'glasses', `${glasses} of ${goal}`));
+      t.addEventListener('click', () => go('#/track/hydration'));
+      return t;
+    },
+
+    energy: () => {
+      const t = el('button', 'tile2 tile2--ring');
+      t.type = 'button';
+      t.append(eyebrow('Energy'), ring(s.kcal, s.kcalGoal, 'kcal', `${s.kcal} of ${s.kcalGoal}`));
+      t.addEventListener('click', () => go('#/track/diet'));
+      return t;
+    },
+
+    meds: () => tile(
+      'Medicines',
+      s.medsDue ? `${s.medsDue} due` : 'None due',
+      s.medsDue ? 'Tap to review' : 'Nothing scheduled',
+      () => go('#/track/meds'),
+    ),
+
+    uv: () => {
+      const hit = lastConditions();
+      const uv = hit?.data?.uv;
+      const band = uvBand(uv);
+      if (!band) {
+        return tile('Sun', 'Not checked', 'Tap to read the UV here', () => go('#/track/outside'));
+      }
+      const advice = sunAdvice(uv, profile.get().skinType);
+      const t = tile(
+        'Sun',
+        `UV ${Math.round(uv * 10) / 10}`,
+        advice?.spf ? `${band.label}, SPF ${advice.spf}` : band.label,
+        () => go('#/track/outside'),
+      );
+      if (band.severity !== 'none') t.dataset.severity = band.severity;
+      if (hit.stale) t.appendChild(el('span', 'tile2__stale', staleLabel(hit.at)));
+      return t;
+    },
+
+    air: () => {
+      const hit = lastConditions();
+      const aqi = hit?.data?.aqi;
+      const band = airBand(aqi, hit?.data?.aqiScale);
+      if (!band) {
+        return tile('Air', 'Not checked', 'Tap to read the air here', () => go('#/track/outside'));
+      }
+      const sub = hit.data.pm25 != null
+        ? `${band.label}, PM2.5 ${Math.round(hit.data.pm25)}`
+        : band.label;
+      const t = tile('Air', `AQI ${Math.round(aqi)}`, sub, () => go('#/track/outside'));
+      if (band.severity !== 'none') t.dataset.severity = band.severity;
+      if (hit.stale) t.appendChild(el('span', 'tile2__stale', staleLabel(hit.at)));
+      return t;
+    },
+  };
+}
+
+/* A reading past its shelf life still says something useful, as long as the
+   tile gives its age rather than presenting it as now. */
+function staleLabel(at) {
+  const hours = Math.round((Date.now() - at) / 3600000);
+  if (hours < 1) return 'from earlier';
+  if (hours < 24) return `${hours} h old`;
+  const days = Math.round(hours / 24);
+  return days === 1 ? 'a day old' : `${days} days old`;
 }

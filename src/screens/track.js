@@ -157,6 +157,8 @@ export function renderHydration(screen, { live }) {
     line.setAttribute('aria-label', `${glasses} of ${goal} glasses`);
     screen.appendChild(line);
 
+    const today = water.today();
+
     const add = el('div', 'chiprow');
     [['Glass', GLASS], ['Large glass', 400], ['Bottle', 500]].forEach(([label, ml]) => {
       add.appendChild(button(label, 'chipbtn', () => {
@@ -165,9 +167,24 @@ export function renderHydration(screen, { live }) {
         draw();
       }));
     });
+
+    /* Adding is one tap, so taking it back has to be one tap as well. Without
+       this the only way out of a stray tap is to find the entry in the list
+       below and press it twice. */
+    const last = today[today.length - 1];
+    const undo = button(
+      last ? `Remove last, ${last.ml} ml` : 'Remove last',
+      'chipbtn chipbtn--undo',
+      () => {
+        if (!last) return;
+        water.remove(last.id);
+        live.textContent = `${last.ml} ml removed`;
+        draw();
+      });
+    undo.disabled = !last;
+    add.appendChild(undo);
     screen.appendChild(add);
 
-    const today = water.today();
     if (today.length) {
       screen.appendChild(el('h2', null, 'When you drank'));
       screen.appendChild(rows(...today.slice().reverse().map(r =>

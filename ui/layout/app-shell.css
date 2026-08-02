@@ -487,3 +487,18 @@ body {
   /* While a drag is running the text under it must not select. */
   [data-dragging], [data-dragging] * { user-select: none; }
 }
+
+/* An undo sits with the controls it undoes, marked apart from them. */
+.chipbtn--undo {
+  border-style: dashed;
+  color: var(--ink-mid);
+}
+.chipbtn--undo:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.chipbtn--undo:not(:disabled):hover {
+  border-style: solid;
+  border-color: var(--sev-soon);
+  color: var(--sev-soon);
+}

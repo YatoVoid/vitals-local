@@ -585,3 +585,42 @@
   letter-spacing: var(--tr-wide);
   color: var(--ink-dim);
 }
+
+/* ---- Arrangeable tiles ----
+   The lift is what tells you the tile is in hand. Everything else dims and
+   settles so the one being moved is unmistakably the subject. */
+.grid2--arrangeable [data-tile] {
+  transition: transform var(--d-quick) var(--ease), opacity var(--d-quick) var(--ease);
+  /* Vertical panning stays with the page until a tile is actually picked up. */
+  touch-action: pan-y;
+}
+.grid2--arrangeable[data-arranging] [data-tile]:not([data-held]) {
+  opacity: 0.55;
+}
+[data-tile][data-held] {
+  position: relative;
+  z-index: var(--z-nav);
+  transition: none;
+  /* Transparent to hit testing, so the tile under the finger can be found. */
+  pointer-events: none;
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.55);
+  border-color: var(--accent);
+  scale: 1.06;
+}
+@media (prefers-reduced-motion: reduce) {
+  .grid2--arrangeable [data-tile] { transition: none; }
+  [data-tile][data-held] { scale: 1; }
+}
+:root[data-motion="reduced"] .grid2--arrangeable [data-tile] { transition: none; }
+:root[data-motion="reduced"] [data-tile][data-held] { scale: 1; }
+
+/* The age of a cached reading, so a stale number is never read as now. */
+.tile2__stale {
+  display: block;
+  margin-block-start: var(--s-1);
+  font-family: var(--font-mono);
+  font-size: var(--t-micro);
+  letter-spacing: var(--label-track);
+  text-transform: var(--label-transform);
+  color: var(--ink-dim);
+}

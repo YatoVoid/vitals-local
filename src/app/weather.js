@@ -71,6 +71,17 @@ function cached() {
 }
 
 /**
+ * The last reading held on this device, without asking the network for
+ * anything. Home reads this: a summary tile must never be the thing that
+ * makes an outbound request.
+ *
+ * @returns {{ data: object, at: number, placeId: string, stale?: boolean } | null}
+ */
+export function lastConditions() {
+  return cached();
+}
+
+/**
  * Fetch UV and air quality for a place.
  * Never throws. Returns { ok, data, error, stale, source }.
  */

@@ -319,6 +319,51 @@ function walk(region, seed, script, limit = 12) {
   assert.ok(PAIN_TYPES.filter(p => !p.extra).length <= 10, 'first pain view stays at ten or fewer');
 }
 
+/* ---- Home tile order ----
+   A saved arrangement outlives the version that wrote it, so it has to
+   survive tiles being added and removed rather than hiding the new ones or
+   throwing on the old. ---- */
+{
+  const bag = new Map();
+  globalThis.localStorage = {
+    getItem: k => (bag.has(k) ? bag.get(k) : null),
+    setItem: (k, v) => bag.set(k, String(v)),
+    removeItem: k => bag.delete(k),
+    key: i => [...bag.keys()][i] ?? null,
+    get length() { return bag.size; },
+  };
+  globalThis.document = { documentElement: { dataset: {} } };
+
+  const { resolveOrder, DEFAULT_ORDER } = await import('../src/screens/home.js');
+
+  assert.deepEqual(resolveOrder(undefined), DEFAULT_ORDER, 'no saved order gives the default');
+  assert.deepEqual(resolveOrder(null), DEFAULT_ORDER);
+  assert.deepEqual(resolveOrder('nonsense'), DEFAULT_ORDER, 'a damaged value falls back');
+  assert.deepEqual(resolveOrder([]), DEFAULT_ORDER, 'an empty order still draws every tile');
+
+  const rotated = ['air', 'uv', 'meds', 'energy', 'water', 'symptoms'];
+  assert.deepEqual(resolveOrder(rotated), rotated, 'a full arrangement is kept as it is');
+
+  // A tile added since the arrangement was saved has to appear.
+  const old = ['symptoms', 'water', 'energy', 'meds'];
+  const now = resolveOrder(old);
+  assert.deepEqual(now.slice(0, 4), old, 'the saved part keeps its order');
+  assert.ok(now.includes('uv') && now.includes('air'), 'newer tiles are appended');
+  assert.equal(now.length, DEFAULT_ORDER.length);
+
+  // A tile removed since must not survive into the render.
+  const withGhost = ['ghost', 'symptoms', 'water', 'energy', 'meds', 'uv', 'air'];
+  assert.ok(!resolveOrder(withGhost).includes('ghost'), 'an unknown id is dropped');
+
+  // No duplicates, whatever went in.
+  const dupes = resolveOrder(['water', 'water', 'symptoms']);
+  assert.equal(new Set(dupes).size, dupes.length, 'the result has no repeats');
+  assert.equal(dupes.length, DEFAULT_ORDER.length);
+
+  delete globalThis.localStorage;
+  delete globalThis.document;
+}
+
 /* ---- Emergency numbers ----
    The number on a red flag screen is the one thing that cannot be guessed, so
    the table is checked for shape and the unknown case for honesty. ---- */
