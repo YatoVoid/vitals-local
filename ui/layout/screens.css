@@ -624,3 +624,58 @@
   text-transform: var(--label-transform);
   color: var(--ink-dim);
 }
+
+/* ---- Where a value sits inside its range ----
+   The edges are not the only thing that carries meaning, so the position is
+   drawn rather than left to be worked out from two numbers. */
+.labscale { margin-block: var(--s-3) var(--s-2); }
+.labscale__track {
+  position: relative;
+  block-size: 6px;
+  border-radius: var(--r-pill);
+  background: linear-gradient(
+    to right,
+    var(--sev-soon-wash) 0%,
+    var(--hair-strong) 12%,
+    var(--hair-strong) 88%,
+    var(--sev-soon-wash) 100%);
+  border: var(--hairline) solid var(--hair);
+}
+.labscale__marker {
+  position: absolute;
+  inset-block-start: 50%;
+  inline-size: 12px;
+  block-size: 12px;
+  margin-inline-start: -6px;
+  margin-block-start: -6px;
+  border-radius: var(--r-pill);
+  background: var(--accent);
+  box-shadow: 0 0 0 2px var(--bg-deep), var(--bloom);
+  transition: inset-inline-start var(--d-settle) var(--ease-out);
+}
+.labscale[data-state="empty"] .labscale__marker { display: none; }
+.labscale__marker[data-zone="deficient"],
+.labscale__marker[data-zone="raised"],
+.labscale__marker[data-zone="subclinical"],
+.labscale__marker[data-zone="inadequate"] { background: var(--sev-soon); }
+.labscale__marker[data-zone="empty"],
+.labscale__marker[data-zone="severe"],
+.labscale__marker[data-zone="diabetes"],
+.labscale__marker[data-zone="high"] { background: var(--sev-now); }
+.labscale__ends {
+  display: flex;
+  justify-content: space-between;
+  margin-block-start: var(--s-1);
+  font-family: var(--font-mono);
+  font-size: var(--t-micro);
+  color: var(--ink-dim);
+  font-variant-numeric: tabular-nums;
+}
+.lab__note {
+  margin: var(--s-2) 0 0;
+  font-size: var(--t-small);
+  color: var(--ink-mid);
+}
+@media (prefers-reduced-motion: reduce) {
+  .labscale__marker { transition: none; }
+}

@@ -8,6 +8,7 @@ import { el, eyebrow, fieldLabel, panel, button, row, rows, ring, segmented, rem
 import { food, water, meds, labs, summary, profile } from '../app/store.js';
 import { compareIngredients, describeIngredient } from '../data/ingredients.js';
 import { open as openEpisodes } from '../app/episodes.js';
+import { MARKERS, assess, RANGE_NOTE } from '../data/labs.js';
 
 /* ---------- Index ---------- */
 export function renderTrackIndex(screen, { go }) {
@@ -465,79 +466,104 @@ export function renderMeds(screen, { live }) {
 }
 
 /* ---------- Labs ---------- */
-const MARKERS = [
-  { id: 'hb',   label: 'Haemoglobin', unit: 'g/L',    low: 130, high: 170, pop: 'adult men, Northern European cohort' },
-  { id: 'fer',  label: 'Ferritin',    unit: 'ug/L',   low: 30,  high: 300, pop: 'adults, mixed cohort' },
-  { id: 'vitd', label: 'Vitamin D',   unit: 'nmol/L', low: 50,  high: 125, pop: 'adults, no season adjustment' },
-  { id: 'tsh',  label: 'TSH',         unit: 'mIU/L',  low: 0.4, high: 4.0, pop: 'adults, not pregnant' },
-];
-
 export function renderLabs(screen, { live }) {
   const draw = () => {
     screen.replaceChildren();
+    const p = profile.get();
+
     screen.appendChild(eyebrow('Lab results'));
     screen.appendChild(el('h1', null, 'Enter what your report says'));
     screen.appendChild(el('p', null,
-      'Type the value and the app shows the reference range beside it, plus how '
-      + 'far off it sits. Ranges differ between labs, so use the one printed on '
-      + 'your own report when it differs from these.'));
+      'Type a value and the app says which band it falls in, not just whether '
+      + 'it cleared the range. Ranges differ between laboratories, so the one '
+      + 'printed on your own report beats the one here.'));
+
+    const what = panel(eyebrow('What a range does and does not say'),
+      el('p', null, RANGE_NOTE));
+    what.style.marginBlockEnd = 'var(--s-4)';
+    screen.appendChild(what);
 
     const saved = Object.fromEntries(labs.all().map(r => [r.marker, r.value]));
 
     MARKERS.forEach(m => {
+      const range = m.rangeFor(p);
       const box = el('div', 'panel panel--ticked lab');
       box.appendChild(eyebrow(`${m.label}, ${m.unit}`));
 
       const line = el('div', 'lab__line');
       const input = el('input', 'field field--num');
       input.type = 'number';
-      input.step = 'any';
+      input.step = String(m.step);
       input.inputMode = 'decimal';
       input.placeholder = 'Value';
       input.value = saved[m.id] ?? '';
       input.setAttribute('aria-label', `${m.label} value in ${m.unit}`);
-      const range = el('span', 'lab__range', `${m.low} to ${m.high}`);
-      line.append(input, range);
+      const rangeText = range.low == null
+        ? `under ${range.high}`
+        : `${range.low} to ${range.high}`;
+      line.append(input, el('span', 'lab__range', rangeText));
       box.appendChild(line);
 
-      const verdict = el('p', 'lab__verdict');
-      const assess = () => {
-        const v = Number(input.value);
-        if (!input.value || !Number.isFinite(v)) {
-          verdict.textContent = '';
+      /* Where the value sits inside the range, because the edges are not the
+         only thing that carries meaning. */
+      const scale = el('div', 'labscale');
+      const track = el('div', 'labscale__track');
+      const marker = el('i', 'labscale__marker');
+      track.appendChild(marker);
+      scale.appendChild(track);
+      const ends = el('div', 'labscale__ends');
+      ends.append(
+        el('span', null, range.low == null ? '' : String(range.low)),
+        el('span', null, String(range.high)),
+      );
+      scale.appendChild(ends);
+      box.appendChild(scale);
+
+      const verdictHead = el('p', 'lab__verdict');
+      const verdictNote = el('p', 'lab__note');
+      box.append(verdictHead, verdictNote);
+
+      const assessNow = () => {
+        const v = numberOrNull(input.value);
+        const read = assess(m, v, p);
+        if (!read) {
+          verdictHead.textContent = '';
+          verdictNote.textContent = '';
           box.dataset.severity = '';
+          scale.dataset.state = 'empty';
+          marker.style.insetInlineStart = '';
           return;
         }
-        if (v < m.low) {
-          const gap = +(m.low - v).toFixed(2);
-          verdict.textContent = `${gap} ${m.unit} below the bottom of the range.`;
-          box.dataset.severity = 'soon';
-        } else if (v > m.high) {
-          const gap = +(v - m.high).toFixed(2);
-          verdict.textContent = `${gap} ${m.unit} above the top of the range.`;
-          box.dataset.severity = 'soon';
-        } else {
-          verdict.textContent = 'Inside the range.';
-          box.dataset.severity = '';
-        }
+        scale.dataset.state = read.outside ?? 'inside';
+        marker.style.insetInlineStart =
+          `${Math.round((read.position ?? (read.outside === 'below' ? 0 : 1)) * 100)}%`;
+        marker.dataset.zone = read.zone.key;
+
+        const distance = read.outside === 'below'
+          ? `${+(range.low - v).toFixed(2)} ${m.unit} below the range. `
+          : read.outside === 'above'
+            ? `${+(v - range.high).toFixed(2)} ${m.unit} above the range. `
+            : '';
+        verdictHead.textContent = `${distance}${read.zone.label}.`;
+        verdictNote.textContent = read.zone.note;
+        box.dataset.severity = read.zone.severity === 'none' ? '' : read.zone.severity;
       };
-      input.addEventListener('input', assess);
+
+      input.addEventListener('input', assessNow);
       input.addEventListener('change', () => {
         const v = numberOrNull(input.value);
         if (v == null) return;
         labs.add({ marker: m.id, label: m.label, value: v, unit: m.unit });
         live.textContent = `${m.label} saved`;
       });
-      assess();
-      box.appendChild(verdict);
+      assessNow();
 
-      /* The population behind a range is the part people never get told, and
-         it is why a value can look abnormal without being wrong. */
       const src = el('details', 'lab__src');
-      src.appendChild(el('summary', null, 'Where this range comes from'));
+      src.appendChild(el('summary', null, 'Where these numbers come from'));
+      src.appendChild(el('p', null, m.basis));
       src.appendChild(el('p', null,
-        `Derived from ${m.pop}. If your report prints a different range, that one `
-        + 'describes the method your sample was run on and beats this.'));
+        `The range shown is for ${range.pop}. If your report prints a different `
+        + 'one, that describes the method your sample was run on and beats this.'));
       box.appendChild(src);
 
       screen.appendChild(box);

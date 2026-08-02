@@ -319,6 +319,87 @@ function walk(region, seed, script, limit = 12) {
   assert.ok(PAIN_TYPES.filter(p => !p.extra).length <= 10, 'first pain view stays at ten or fewer');
 }
 
+/* ---- Lab bands ----
+   The whole point of these is that a value can sit inside the printed range
+   and still mean something, so the tests pin the thresholds that carry that
+   and the wording that must not slip. ---- */
+{
+  const { MARKERS, assess, RANGE_NOTE } = await import('../src/data/labs.js');
+  const find = id => MARKERS.find(m => m.id === id);
+  const zoneAt = (id, value, profile) => assess(find(id), value, profile).zone.key;
+
+  // Every marker has zones that cover the number line, low to high.
+  for (const m of MARKERS) {
+    const zones = m.zonesFor({});
+    assert.ok(zones.length >= 2, `${m.id} needs more than one zone`);
+    assert.equal(zones[zones.length - 1].upTo, Infinity, `${m.id} must not run out of zones`);
+    let last = -Infinity;
+    for (const z of zones) {
+      assert.ok(z.upTo > last, `${m.id} zones must climb`);
+      last = z.upTo;
+      assert.ok(z.label && z.note, `${m.id} zone ${z.key} needs a label and a note`);
+      assert.ok(['none', 'soon', 'now'].includes(z.severity), `${m.id} zone ${z.key} severity`);
+    }
+    assert.ok(m.basis && m.basis.length > 20, `${m.id} says where its numbers come from`);
+  }
+
+  /* Ferritin is the case the whole feature exists for: 20 is inside a range
+     that starts at 15 in many laboratories, and is still iron deficiency. */
+  assert.equal(zoneAt('fer', 10), 'empty');
+  assert.equal(zoneAt('fer', 20), 'deficient');
+  assert.equal(zoneAt('fer', 29), 'deficient');
+  assert.equal(zoneAt('fer', 45), 'low-ish');
+  assert.equal(zoneAt('fer', 150), 'ok');
+  assert.equal(zoneAt('fer', 400), 'high');
+  assert.match(assess(find('fer'), 20).zone.note, /deficien/i);
+
+  /* Haemoglobin has to follow the sex on the profile, since the anaemia
+     threshold differs by about 10 g/L. */
+  assert.equal(zoneAt('hb', 125, { sex: 'Female' }), 'low-normal');
+  assert.equal(zoneAt('hb', 125, { sex: 'Male' }), 'mild');
+  assert.equal(assess(find('hb'), 125, { sex: 'Female' }).outside, null);
+  assert.equal(assess(find('hb'), 125, { sex: 'Male' }).outside, 'below');
+  assert.equal(zoneAt('hb', 70, {}), 'severe');
+  assert.equal(zoneAt('hb', 95, {}), 'moderate');
+
+  /* HbA1c: the band between normal and diabetes is inside what many reports
+     print without a flag. */
+  assert.equal(zoneAt('hba1c', 38), 'ok');
+  assert.equal(zoneAt('hba1c', 44), 'raised');
+  assert.equal(zoneAt('hba1c', 48), 'diabetes');
+  assert.match(assess(find('hba1c'), 44).zone.note, /42 and 47|6\.0 to 6\.4/);
+
+  // TSH: inside the range at the top is not the same as mid range.
+  assert.equal(zoneAt('tsh', 1.5), 'mid');
+  assert.equal(zoneAt('tsh', 3.8), 'upper');
+  assert.equal(zoneAt('tsh', 6), 'subclinical');
+  assert.equal(zoneAt('tsh', 12), 'high');
+  assert.match(assess(find('tsh'), 1.5).zone.note, /pregnan/i);
+
+  // Vitamin D: sufficiency and deficiency are different thresholds.
+  assert.equal(zoneAt('vitd', 20), 'deficient');
+  assert.equal(zoneAt('vitd', 40), 'inadequate');
+  assert.equal(zoneAt('vitd', 60), 'sufficient');
+
+  // Position is only meaningful inside the range.
+  const inside = assess(find('vitd'), 87);
+  assert.ok(inside.position > 0.4 && inside.position < 0.6, 'mid range reads as mid');
+  assert.equal(assess(find('vitd'), 10).position, null, 'outside has no position');
+
+  assert.equal(assess(find('tsh'), null), null);
+  assert.equal(assess(find('tsh'), NaN), null);
+
+  // The explanation people are owed must not go missing.
+  assert.match(RANGE_NOTE, /95/);
+  assert.match(RANGE_NOTE, /twenty|20/);
+
+  // House style: no hedging in anything shown on this screen.
+  const prose = MARKERS.flatMap(m => [m.basis, ...m.zonesFor({}).flatMap(z => [z.label, z.note])])
+    .concat(RANGE_NOTE).join(' ');
+  assert.ok(!/consult a healthcare|it is important to|may potentially|please note/i.test(prose),
+    'lab wording avoids the hedges the style rules ban');
+}
+
 /* ---- Home tile order ----
    A saved arrangement outlives the version that wrote it, so it has to
    survive tiles being added and removed rather than hiding the new ones or
