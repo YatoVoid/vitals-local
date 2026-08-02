@@ -88,17 +88,28 @@ export function usage() {
    which would take their choice away. */
 const THEME_ALIASES = { med: 'neon' };
 
+/* The themes that exist. Anything else, from a future version or a damaged
+   store, falls back rather than reaching the DOM as an unknown value. */
+const THEMES = ['kawaii', 'neon', 'crt'];
+
+const SETTING_DEFAULTS = {
+  theme: 'kawaii',
+  motion: 'system',
+  language: 'en',
+  country: 'US',
+  units: 'metric',
+  textSize: 'normal',
+};
+
 export const settings = {
   get() {
-    const s = read('settings', {
-      theme: 'kawaii',
-      motion: 'system',
-      language: 'en',
-      country: 'US',
-      units: 'metric',
-      textSize: 'normal',
-    });
+    /* Merged over the defaults rather than returned as found. A stored object
+       written by an older version, or restored from an export made by one, is
+       missing whatever was added since, and an absent key reaching the DOM
+       lands as the string "undefined". */
+    const s = { ...SETTING_DEFAULTS, ...read('settings', {}) };
     if (THEME_ALIASES[s.theme]) s.theme = THEME_ALIASES[s.theme];
+    if (!THEMES.includes(s.theme)) s.theme = SETTING_DEFAULTS.theme;
     return s;
   },
   set(patch) {

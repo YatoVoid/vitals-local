@@ -344,6 +344,19 @@ function walk(region, seed, script, limit = 12) {
   bag.set('vitals.settings', JSON.stringify({ theme: 'crt' }));
   assert.equal(store.settings.get().theme, 'crt', 'other themes are left alone');
 
+  /* A settings object written before a key existed, or restored from an
+     export made then, must not hand the DOM an undefined. */
+  bag.set('vitals.settings', JSON.stringify({ setupDone: true, country: 'AZ' }));
+  const partial = store.settings.get();
+  assert.equal(partial.theme, 'kawaii', 'a missing theme falls back');
+  assert.equal(partial.country, 'AZ', 'what was stored is kept');
+  for (const [k, v] of Object.entries(partial)) {
+    assert.notEqual(v, undefined, `${k} came back undefined`);
+  }
+
+  bag.set('vitals.settings', JSON.stringify({ theme: 'from-the-future' }));
+  assert.equal(store.settings.get().theme, 'kawaii', 'an unknown theme falls back');
+
   // Every theme defines every token, checked against the stylesheet itself.
   const { readFileSync } = await import('node:fs');
   const { join, dirname } = await import('node:path');
