@@ -42,8 +42,8 @@
 .tile2--ring { align-items: center; justify-content: space-between; }
 
 /* ---- Ring gauge ---- */
-.ringbox { display: grid; justify-items: center; gap: var(--s-1); }
-.ring { position: relative; inline-size: 76px; block-size: 76px; }
+.ringbox { display: grid; justify-items: center; gap: var(--s-1); min-inline-size: 0; }
+.ring { position: relative; inline-size: 84px; block-size: 84px; }
 .ring svg { inline-size: 100%; block-size: 100%; transform: rotate(-90deg); }
 .ring__track { fill: none; stroke: var(--hair); stroke-width: 6; }
 .ring__arc {
@@ -54,6 +54,8 @@
   filter: drop-shadow(0 0 4px var(--accent));
   transition: stroke-dashoffset var(--d-settle) var(--ease-out);
 }
+/* The number is centred on the circle's own centre, which only works while
+   it is the single thing in here. */
 .ring__mid {
   position: absolute;
   inset: 0;
@@ -63,17 +65,31 @@
 }
 .ring__val {
   font-family: var(--font-mono);
-  font-size: var(--t-lead);
-  font-weight: var(--w-strong);
+  font-size: var(--t-h3);
+  font-weight: var(--w-heavy);
   font-variant-numeric: tabular-nums;
   line-height: 1;
+  color: var(--ink);
 }
+/* Outside the circle, so it can be any length in any language. */
 .ring__unit {
+  margin: 0;
   font-family: var(--font-mono);
   font-size: var(--t-micro);
-  color: var(--ink-dim);
+  color: var(--ink-mid);
   letter-spacing: var(--label-track);
   text-transform: var(--label-transform);
+  text-align: center;
+  text-wrap: balance;
+  max-inline-size: 100%;
+}
+.ring__label {
+  margin: 0;
+  font-size: var(--t-small);
+  color: var(--ink-mid);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  max-inline-size: 100%;
 }
 
 /* ---- Fields ---- */
@@ -304,7 +320,7 @@
 .glasses { max-inline-size: 100%; }
 
 /* Ring labels are generated from numbers that can grow to five digits. */
-.ring__val { font-size: clamp(0.75rem, 0.6rem + 0.8vw, var(--t-lead)); }
+.ring__val { font-size: clamp(1.05rem, 0.85rem + 1vw, var(--t-h3)); }
 
 /* ---- Comparison verdicts ----
  * Each result carries a mark, a colour, and a sentence saying why. The mark

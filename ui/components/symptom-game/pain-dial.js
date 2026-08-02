@@ -83,16 +83,17 @@ export function renderPainDial({ types, selected, centreLabel, onToggle }) {
     // them fit a ring without colliding. Anything past the halfway point of
     // the circle gets flipped so no word ends up upside down.
     const mid = (a0 + a1) / 2;
-    const rLabel = (R_OUT + R_IN) / 2 - 2;
+    /* On a crowded ring the ends of neighbouring labels meet and read as one
+       long word. Alternating the radius by a few units pulls them apart
+       without shrinking the type. */
+    const stagger = types.length > 8 ? (i % 2 ? 4 : -4) : 0;
+    const rLabel = (R_OUT + R_IN) / 2 - 2 + stagger;
     const [lx, ly] = px(rLabel, mid);
     const flip = mid > 90 && mid < 270;
     const label = document.createElementNS(NS, 'text');
     label.setAttribute('x', lx);
     label.setAttribute('y', ly);
     label.setAttribute('class', 'dial__label');
-    // Anything past nine characters gets a touch smaller so the ring stays
-    // even. Labels are kept short enough that this rarely fires.
-    if (t.label.length > 9) label.setAttribute('font-size', '6');
     label.setAttribute('text-anchor', 'middle');
     label.setAttribute('dominant-baseline', 'central');
     label.setAttribute('transform', `rotate(${mid + (flip ? 180 : 0)} ${lx} ${ly})`);
@@ -173,7 +174,49 @@ export function renderPainDial({ types, selected, centreLabel, onToggle }) {
   svg.appendChild(count);
 
   wrap.appendChild(svg);
+  /* A staggered ring gives each label less clear radius, so the budget drops
+     with it. */
+  fitLabelsWhenMounted(svg, types.length > 8 ? 32 : 38);
   return wrap;
+}
+
+/**
+ * Squeeze any label that outgrows its wedge.
+ *
+ * Wedge labels run radially, so their length is bounded by the width of the
+ * band rather than by the arc. English sits close to that bound already and a
+ * translation goes past it, so each label is measured once on screen and
+ * compressed to the room it has. Short words are left alone: `textLength`
+ * would otherwise stretch them across the whole band.
+ *
+ * Measuring needs layout, which a detached node does not have, hence the
+ * wait for the mount.
+ */
+function fitLabelsWhenMounted(svg, room) {
+  const fit = () => {
+    if (!svg.isConnected) return;
+    svg.querySelectorAll('.dial__label').forEach(label => {
+      label.removeAttribute('textLength');
+      let width = 0;
+      try { width = label.getComputedTextLength(); } catch { return; }
+      if (!width || width <= room) return;
+      label.setAttribute('textLength', String(room));
+      label.setAttribute('lengthAdjust', 'spacingAndGlyphs');
+    });
+  };
+  requestAnimationFrame(fit);
+
+  /* Translation rewrites these labels in place, after the first measurement
+     and by no single event this could listen for. Watching the text itself
+     catches every path that changes it. Only character data and children are
+     observed, so setting the length back does not retrigger this. */
+  let queued = false;
+  const observer = new MutationObserver(() => {
+    if (queued) return;
+    queued = true;
+    requestAnimationFrame(() => { queued = false; fit(); });
+  });
+  observer.observe(svg, { characterData: true, childList: true, subtree: true });
 }
 
 /**

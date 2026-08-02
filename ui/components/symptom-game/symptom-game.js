@@ -11,6 +11,15 @@ import { renderPainDial, renderIntensity } from './pain-dial.js';
 import { start as startEpisode, open as openEpisodes, addReading }
   from '../../../src/app/episodes.js';
 import { STATES, MULTI_SELECT_PAIN, initialState, send, resolve, progress } from './machine.js';
+import { enableDragScroll } from '../../../src/app/ui.js';
+import { emergencyLine } from '../../../src/data/emergency.js';
+import { savedPlace } from '../../../src/app/weather.js';
+import { settings } from '../../../src/app/store.js';
+
+/* The country setting names a labelling region rather than a place. Only the
+   ones that are a single country can point at an emergency number; "Europe,
+   general" cannot, and says so instead of guessing. */
+const isoForSetting = code => (['AZ', 'US', 'GR'].includes(code) ? code : null);
 
 const el = (tag, cls, text) => {
   const n = document.createElement(tag);
@@ -48,6 +57,7 @@ export function mount(root) {
   live.setAttribute('aria-live', 'polite');
 
   root.append(hud, meter, stageHost, sheetHost, live);
+  enableDragScroll(root);
 
   /* Some controls own their own visual state while dragging, so a full
      redraw mid-gesture would fight the finger. This records the change
@@ -333,10 +343,17 @@ export function mount(root) {
   function painTypes(panel) {
     header(panel, labelFor(state.region), 'What does it feel like?');
 
-    // All twelve types fit the ring, so there is no "more types" step to
-    // hide half of them behind.
+    /* Eight wedges to start, twelve on request. Twelve at a size anyone can
+       read overlap their neighbours: the label runs radially, so the room it
+       has is set by the width of the band, and the gap between one label and
+       the next by the angle. Eight gives both. The four held back are the
+       less common qualities, and any already picked stay on the ring. */
+    const showAll = state.showExtraPain
+      || PAIN_TYPES.some(t => t.extra && state.painTypes.includes(t.id));
+    const types = showAll ? PAIN_TYPES : PAIN_TYPES.filter(t => !t.extra);
+
     panel.appendChild(renderPainDial({
-      types: PAIN_TYPES,
+      types,
       selected: state.painTypes,
       centreLabel: labelFor(state.region),
       onToggle: id => {
@@ -345,6 +362,16 @@ export function mount(root) {
         scrollNextIntoView();
       },
     }));
+
+    if (!showAll) {
+      const more = el('button', 'linkish', 'More types');
+      more.type = 'button';
+      more.addEventListener('click', () => {
+        dispatch({ type: 'reveal_extra_pain' });
+        live.textContent = 'Four more types added to the ring';
+      });
+      panel.appendChild(more);
+    }
 
     if (state.painTypes.length) {
       const chips = el('div', 'chips');
@@ -399,7 +426,10 @@ export function mount(root) {
     footer(panel, {
       nextLabel: 'Skip this one',
       enabled: true,
-      onNext: () => dispatch({ type: 'advance' }),
+      onNext: () => {
+        dispatch({ type: 'skip_question' });
+        live.textContent = 'Question skipped';
+      },
     });
 
     const stop = el('button', 'linkish linkish--quiet', 'Stop and show what you have');
@@ -731,6 +761,29 @@ export function mount(root) {
         sheet.setAttribute('aria-label', 'Get urgent help');
         sheet.dataset.critical = '';
         sheet.appendChild(el('h3', 'sheet__head', 'Go now. Do not drive yourself.'));
+
+        /* The number to dial is the whole point of this sheet. It comes from
+           the place already chosen for weather, falling back to the country
+           in Settings, and says so plainly when neither names a country the
+           table covers. */
+        const place = savedPlace();
+        const iso = place?.iso ?? isoForSetting(settings.get().country);
+        const line = emergencyLine(iso, place?.country);
+
+        if (line.known) {
+          const dial = el('a', 'btn btn--urgent sheet__call', `Call ${line.call}`);
+          dial.href = `tel:${line.call}`;
+          dial.setAttribute('lang', 'en');
+          dial.setAttribute('translate', 'no');
+          sheet.appendChild(dial);
+          if (line.also) {
+            sheet.appendChild(el('p', 'hint', `${line.also} reaches the same service.`));
+          }
+        } else {
+          sheet.appendChild(el('p', 'sheet__nonumber', line.text));
+        }
+
+        sheet.appendChild(el('p', 'label', 'What to say'));
         const ul = el('ul', 'card__list');
         ['Say when it started and where it started.',
          'Say what you were doing at the time.',

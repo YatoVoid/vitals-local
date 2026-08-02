@@ -573,12 +573,14 @@
   transition: fill var(--d-quick) var(--ease);
   pointer-events: none;
 }
+/* Sized and coloured to be read at arm's length on a phone, where 7px of a
+   200 unit viewBox came out near eleven real pixels in the dim ink. */
 .dial__label {
   font-family: var(--font-mono);
-  font-size: 7px;
-  letter-spacing: 0.06em;
+  font-size: 9px;
+  letter-spacing: 0.04em;
   text-transform: var(--label-transform);
-  fill: var(--ink-mid);
+  fill: var(--ink);
   pointer-events: none;
 }
 .dial__seg.selected .dial__glyph { fill: var(--accent); }
@@ -818,3 +820,19 @@
 
 /* Clipped by the crop, so not reachable by finger or by keyboard either. */
 .zone--offcrop { pointer-events: none; }
+
+/* The number to dial is the largest thing on the urgent sheet. */
+.sheet__call {
+  display: block;
+  text-align: center;
+  text-decoration: none;
+  font-size: var(--t-h3);
+  font-weight: var(--w-heavy);
+  letter-spacing: var(--tr-tight);
+  font-variant-numeric: tabular-nums;
+  padding-block: var(--s-3);
+}
+.sheet__nonumber {
+  font-weight: var(--w-strong);
+  color: var(--ink);
+}

@@ -36,6 +36,10 @@ export function startSession(bank, seed) {
     intensity: seed.intensity ?? null,
     answers: {},        // questionId -> optionId
     asked: [],          // questionId order, for back navigation
+    /* Questions the person declined to answer. Held apart from `answers`
+       because a skip carries no evidence: it must not move any candidate,
+       only stop the question being asked again. */
+    skipped: [],
     candidates,
     redFlag: null,
     done: false,
@@ -119,8 +123,21 @@ function separation(question, session, bank) {
 /** Is this question worth asking given what is already known? */
 function applicable(question, session) {
   if (session.answers[question.id] != null) return false;
+  if (session.skipped?.includes(question.id)) return false;
   if (question.needs && !matches(question.needs, session)) return false;
   return true;
+}
+
+/**
+ * Set a question aside without answering it.
+ *
+ * No likelihood ratio is applied, so the ranking is exactly what it was. The
+ * question simply leaves the pool, which is what stops the engine offering it
+ * again on the next step.
+ */
+export function skipQuestion(session, questionId) {
+  if (!questionId || session.skipped?.includes(questionId)) return session;
+  return { ...session, skipped: [...(session.skipped ?? []), questionId] };
 }
 
 /**
@@ -186,6 +203,7 @@ export function stepBack(session, bank) {
   delete answers[dropped];
 
   let rebuilt = startSession(bank, session);
+  rebuilt.skipped = [...(session.skipped ?? [])];
   for (const qid of asked) {
     rebuilt = answer(rebuilt, bank, qid, answers[qid]);
   }

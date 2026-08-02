@@ -21,7 +21,7 @@
 
 import { bankFor } from '../../../src/triage/index.js';
 import { startSession, nextQuestion, answer as answerQuestion, stepBack, resolve as resolveTriage,
-         progress as triageProgress, hasMoreQuestions } from '../../../src/triage/engine.js';
+         progress as triageProgress, hasMoreQuestions, skipQuestion } from '../../../src/triage/engine.js';
 
 export const STATES = {
   BODY_SELECT: 'BODY_SELECT',
@@ -127,6 +127,15 @@ export function send(s, e) {
 
     case 'advance':
       return advance(s);
+
+    /* Set the current question aside. It leaves the pool rather than being
+       answered, so nothing moves in the ranking and the same question is not
+       offered straight back. */
+    case 'skip_question': {
+      if (s.stage !== STATES.CONTEXT || !s.triage || !s.question) return s;
+      const triage = skipQuestion(s.triage, s.question.id);
+      return advance({ ...s, triage });
+    }
 
     case 'back':
       return back(s);

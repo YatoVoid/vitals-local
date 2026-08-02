@@ -222,6 +222,21 @@ not, and `VERSION` clears the cache when the file list changes.
 Cross-origin requests are never intercepted, so the weather and translation
 endpoints are never replayed from a cache.
 
+### Working on the app with a worker installed
+
+The worker serves assets from its cache, ahead of the network and ahead of any
+header the dev server sends. An edit to a module therefore does nothing at all
+until the cache updates, which looks exactly like a change that did not work.
+
+Clear it before trusting what is on screen:
+
+```js
+(await navigator.serviceWorker.getRegistrations()).forEach(r => r.unregister());
+(await caches.keys()).forEach(k => caches.delete(k));
+```
+
+DevTools offers the same under Application, with "Bypass for network".
+
 ## Development server
 
 `scripts/serve.py` sends `Cache-Control: no-store` and strips `Last-Modified`.

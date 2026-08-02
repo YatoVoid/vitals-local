@@ -85,12 +85,17 @@ export function ring(value, goal, unit, label) {
   svg.append(track, arc);
   wrap.appendChild(svg);
 
+  /* Only the number goes inside. A circle is the worst container for a word
+     whose length changes with the language: the usable width at the unit's
+     own height is narrower than the ring looks, so anything longer than a few
+     characters crosses the stroke. The unit sits under the ring instead,
+     where it can be as long as it needs to be. */
   const mid = el('div', 'ring__mid');
-  mid.append(el('span', 'ring__val', String(value)), el('span', 'ring__unit', unit));
+  mid.append(el('span', 'ring__val', String(value)));
   wrap.appendChild(mid);
 
   const box = el('div', 'ringbox');
-  box.append(wrap, el('p', 'eyebrow', label));
+  box.append(wrap, el('p', 'ring__unit', unit), el('p', 'ring__label', label));
   box.setAttribute('role', 'img');
   box.setAttribute('aria-label', `${label}: ${value} of ${goal} ${unit}`);
   return box;
@@ -189,4 +194,70 @@ export function numberOrNull(value) {
   if (!raw) return null;
   const n = Number(raw);
   return Number.isFinite(n) ? n : null;
+}
+
+/**
+ * Let a pointer drag a horizontal strip sideways.
+ *
+ * Touch gets this from the platform and a wheel works on a trackpad, but a
+ * mouse has neither: the strip looks draggable and does nothing. One
+ * delegated listener covers every strip on the page, including ones rendered
+ * later, so nothing has to be wired up per screen.
+ *
+ * @param {HTMLElement} root
+ */
+export function enableDragScroll(root) {
+  let target = null;
+  let startX = 0;
+  let startScroll = 0;
+  let moved = false;
+
+  const scrollerAt = node => {
+    for (let el = node; el && el !== root.parentElement; el = el.parentElement) {
+      if (!(el instanceof HTMLElement)) continue;
+      if (el.scrollWidth <= el.clientWidth + 1) continue;
+      const overflow = getComputedStyle(el).overflowX;
+      if (overflow === 'auto' || overflow === 'scroll') return el;
+    }
+    return null;
+  };
+
+  root.addEventListener('pointerdown', ev => {
+    // Touch already scrolls by itself, and a second handler fights it.
+    if (ev.pointerType === 'touch' || ev.button !== 0) return;
+    const el = scrollerAt(ev.target);
+    if (!el) return;
+    target = el;
+    startX = ev.clientX;
+    startScroll = el.scrollLeft;
+    moved = false;
+  });
+
+  root.addEventListener('pointermove', ev => {
+    if (!target) return;
+    const dx = ev.clientX - startX;
+    // A few pixels of slop, so a press that wanders slightly is still a tap.
+    if (!moved && Math.abs(dx) < 4) return;
+    moved = true;
+    target.dataset.dragging = 'on';
+    target.scrollLeft = startScroll - dx;
+    ev.preventDefault();
+  });
+
+  const end = () => {
+    if (target) delete target.dataset.dragging;
+    target = null;
+  };
+  root.addEventListener('pointerup', end);
+  root.addEventListener('pointercancel', end);
+  root.addEventListener('pointerleave', end);
+
+  /* A drag that ends over a button would otherwise activate it. The click
+     fires after pointerup, so it is swallowed once in the capture phase. */
+  root.addEventListener('click', ev => {
+    if (!moved) return;
+    moved = false;
+    ev.preventDefault();
+    ev.stopPropagation();
+  }, true);
 }

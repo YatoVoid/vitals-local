@@ -478,3 +478,12 @@ body {
 .notice__head { font-weight: var(--w-strong); color: var(--sev-now); margin: 0; }
 .notice p { margin: 0; font-size: var(--t-small); }
 @keyframes notice-in { from { opacity: 0; transform: translate3d(0, var(--s-3), 0); } }
+
+/* A strip that can be dragged says so under the cursor. Touch needs none of
+   this, and a pointer that cannot hover never sees it. */
+@media (hover: hover) and (pointer: fine) {
+  .chiprow, .zooms { cursor: grab; }
+  .chiprow[data-dragging], .zooms[data-dragging] { cursor: grabbing; }
+  /* While a drag is running the text under it must not select. */
+  [data-dragging], [data-dragging] * { user-select: none; }
+}

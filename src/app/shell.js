@@ -7,6 +7,7 @@
 
 import { SCREENS, TABS, resolveRoute } from './routes.js';
 import { onWriteError } from './store.js';
+import { enableDragScroll } from './ui.js';
 import * as i18n from '../i18n/index.js';
 
 const el = (tag, cls, text) => {
@@ -210,6 +211,7 @@ export function boot(mountPoint) {
 
   // Anything rendered later, by a screen or a component, is picked up too.
   i18n.observe(app);
+  enableDragScroll(app);
 
   window.addEventListener('hashchange', render);
   // Changing language rebuilds the screen so every string goes through the

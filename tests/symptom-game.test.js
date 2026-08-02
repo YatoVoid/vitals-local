@@ -8,7 +8,7 @@ import { regionIdFor, regionsIn, VIEWS, ZOOMS, zoomById, BODY_W, BODY_H }
   from '../ui/components/symptom-game/body-map.js';
 import { initialState, send, STATES, progress } from '../ui/components/symptom-game/machine.js';
 import { bankFor, BANKS, GENERIC } from '../src/triage/index.js';
-import { startSession, nextQuestion, answer, resolve, ranked, stepBack }
+import { startSession, nextQuestion, answer, resolve, ranked, stepBack, skipQuestion }
   from '../src/triage/engine.js';
 import { compareIngredients, parseIngredient } from '../src/data/ingredients.js';
 
@@ -317,6 +317,86 @@ function walk(region, seed, script, limit = 12) {
     }
   }
   assert.ok(PAIN_TYPES.filter(p => !p.extra).length <= 10, 'first pain view stays at ten or fewer');
+}
+
+/* ---- Emergency numbers ----
+   The number on a red flag screen is the one thing that cannot be guessed, so
+   the table is checked for shape and the unknown case for honesty. ---- */
+{
+  const { emergencyFor, emergencyLine, coveredCountries } =
+    await import('../src/data/emergency.js');
+
+  for (const iso of coveredCountries()) {
+    const hit = emergencyFor(iso);
+    assert.match(iso, /^[A-Z]{2}$/, `${iso} is a two letter code`);
+    assert.match(hit.call, /^[0-9]{2,5}$/, `${iso} dials digits only, got ${hit.call}`);
+    if (hit.also) assert.match(hit.also, /^[0-9]{2,5}$/, `${iso} second number is digits`);
+  }
+
+  // Countries the app ships a labelling set for must all be covered.
+  for (const iso of ['AZ', 'US', 'GR']) {
+    assert.ok(emergencyFor(iso), `${iso} has an emergency number`);
+  }
+  assert.equal(emergencyFor('US').call, '911');
+  assert.equal(emergencyFor('GR').call, '112');
+  assert.equal(emergencyFor('AZ').call, '112');
+  assert.equal(emergencyFor('GB').call, '999');
+
+  assert.equal(emergencyFor('ZZ'), null, 'an unknown country has no number');
+  assert.equal(emergencyFor(null), null);
+  assert.equal(emergencyFor(undefined), null);
+
+  const unknown = emergencyLine(null, null);
+  assert.equal(unknown.known, false);
+  assert.ok(!/^Call [0-9]/.test(unknown.text),
+    'an unknown country must not open by naming a number as if it were local');
+  assert.match(unknown.text, /local emergency number/i);
+
+  const known = emergencyLine('GR', 'Greece');
+  assert.equal(known.known, true);
+  assert.match(known.text, /112/);
+  assert.match(known.text, /Greece/);
+}
+
+/* ---- Skipping a question ----
+   Skipping must remove the question from the pool. Left in, the engine picks
+   the same one straight back and the button looks dead. It must also leave
+   the ranking untouched, since a skip is not evidence. ---- */
+{
+  const bank = bankFor('chest.left');
+  let s = startSession(bank, { region: 'chest.left', painTypes: ['pain.sharp'], intensity: 5 });
+
+  const first = nextQuestion(s, bank);
+  assert.ok(first, 'there is a question to skip');
+
+  const beforeRanking = ranked(s, bank).map(c => `${c.category_id ?? c.id}:${c.score.toFixed(4)}`);
+  const skipped = skipQuestion(s, first.id);
+  const afterRanking = ranked(skipped, bank).map(c => `${c.category_id ?? c.id}:${c.score.toFixed(4)}`);
+  assert.deepEqual(afterRanking, beforeRanking, 'a skip moves no candidate');
+
+  const second = nextQuestion(skipped, bank);
+  assert.notEqual(second?.id, first.id, 'the skipped question is not offered again');
+
+  // Skipping everything has to end the session rather than loop.
+  let all = s;
+  for (let i = 0; i < bank.questions.length + 2; i++) {
+    const q = nextQuestion(all, bank);
+    if (!q) break;
+    all = skipQuestion(all, q.id);
+  }
+  assert.equal(nextQuestion(all, bank), null, 'skipping every question resolves the session');
+
+  // A skip survives stepping back through the answers.
+  let walked = startSession(bank, { region: 'chest.left', painTypes: ['pain.sharp'], intensity: 5 });
+  const q1 = nextQuestion(walked, bank);
+  walked = answer(walked, bank, q1.id, q1.options[0].id);
+  const q2 = nextQuestion(walked, bank);
+  walked = skipQuestion(walked, q2.id);
+  const q3 = nextQuestion(walked, bank);
+  walked = answer(walked, bank, q3.id, q3.options[0].id);
+  const back = stepBack(walked, bank);
+  assert.ok(back.skipped.includes(q2.id), 'stepping back keeps the skip');
+  assert.notEqual(nextQuestion(back, bank)?.id, q2.id, 'and does not re-offer it');
 }
 
 /* ---- Offline precache ----
