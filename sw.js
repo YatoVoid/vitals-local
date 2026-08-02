@@ -21,7 +21,7 @@
  * cache.
  */
 
-const VERSION = 'vitals-4';
+const VERSION = 'vitals-5';
 
 /* Everything needed to start with no network. Paths are relative so this works
    from a project subpath as well as a domain root. */
@@ -125,8 +125,14 @@ self.addEventListener('fetch', event => {
     const hit = await cache.match(request, { ignoreSearch: true });
 
     /* Kicked off either way, and never awaited when there is a hit: waiting on
-       it is exactly what made the offline start slow. */
-    const update = fetch(request)
+       it is exactly what made the offline start slow.
+
+       no-cache rather than a plain fetch, because a plain one is answered by
+       the HTTP cache. Pages serves these with a ten minute max-age, so the
+       revalidation was handed back the same copy already held and wrote it
+       straight back: a held copy never picked up a fix, at any point. This
+       asks the server, which answers 304 when nothing changed. */
+    const update = fetch(new Request(request, { cache: 'no-cache' }))
       .then(fresh => {
         if (fresh && fresh.ok) cache.put(request, fresh.clone());
         return fresh;
