@@ -10,6 +10,13 @@ import { compareIngredients, describeIngredient } from '../data/ingredients.js';
 import { open as openEpisodes } from '../app/episodes.js';
 import { MARKERS, assess, RANGE_NOTE } from '../data/labs.js';
 
+/* "gl" is not an abbreviation anyone uses, and it read as a word cut off
+   halfway. The row has room for the whole word. */
+const glassCount = ml => {
+  const n = Math.round(ml / 250);
+  return `${n} ${n === 1 ? 'glass' : 'glasses'}`;
+};
+
 /* ---------- Index ---------- */
 export function renderTrackIndex(screen, { go }) {
   const s = summary();
@@ -18,7 +25,7 @@ export function renderTrackIndex(screen, { go }) {
 
   screen.appendChild(rows(
     row('Food and energy', { end: `${s.kcal} kcal`, sub: `Target ${s.kcalGoal}`, onClick: () => go('#/track/diet') }),
-    row('Water', { end: `${Math.round(s.waterMl / 250)} gl`, sub: `Target ${Math.round(s.waterGoalMl / 250)} glasses`, onClick: () => go('#/track/hydration') }),
+    row('Water', { end: glassCount(s.waterMl), sub: `Target ${Math.round(s.waterGoalMl / 250)} glasses`, onClick: () => go('#/track/hydration') }),
     row('Medicines', { end: meds.all().length ? `${meds.all().length}` : 'None', sub: 'Compare a label, set a reminder', onClick: () => go('#/track/meds') }),
     row('Lab results', { end: labs.all().length ? `${labs.all().length}` : 'None', sub: 'Enter values, see the range', onClick: () => go('#/track/labs') }),
     row('Tracked pain', { end: openEpisodes().length ? `${openEpisodes().length}` : 'None', sub: 'Watch how a symptom changes', onClick: () => go('#/track/pain') }),

@@ -384,6 +384,20 @@ function walk(region, seed, script, limit = 12) {
   assert.match(blockFor('kawaii'), /color-scheme:\s*light/);
   assert.match(blockFor('neon'), /color-scheme:\s*dark/);
 
+  /* A list of rows is one card in the soft theme. Without it the rows arrive
+     as separate square slabs beside panels that are all rounded, which is
+     what Track, Learn and You looked like. The instrument themes keep the
+     bare hairline list, so the rule stays scoped to the one theme. */
+  const shell = readFileSync(
+    join(dirname(fileURLToPath(import.meta.url)), '..', 'ui', 'layout', 'app-shell.css'), 'utf8');
+  const listCard = shell.match(
+    /:root\[data-theme="kawaii"\]\s*\.rows:has\(>\s*\.row\)\s*\{[^}]*\}/);
+  assert.ok(listCard, 'the soft theme groups a row list into one card');
+  assert.match(listCard[0], /border-radius:\s*var\(--r-md\)/,
+    'the row list carries the same radius as a panel, since the two stack');
+  assert.ok(!/kawaii"\]\s*\.row\s*\{[^}]*box-shadow/.test(shell),
+    'rows do not each carry their own card shadow');
+
   delete globalThis.localStorage;
   delete globalThis.document;
 }

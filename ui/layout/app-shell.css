@@ -516,7 +516,27 @@ body {
 /* Cards lift off the cream instead of being outlined against the dark. */
 :root[data-theme="kawaii"] .panel,
 :root[data-theme="kawaii"] .card,
-:root[data-theme="kawaii"] .tile2,
-:root[data-theme="kawaii"] .row {
+:root[data-theme="kawaii"] .tile2 {
   box-shadow: var(--shadow-card);
+}
+
+/* A list of rows is one card, not a row of them.
+   The instrument themes hang these hairlines off the measuring grid behind
+   them, which is what holds the list together there. The soft theme has no
+   grid, so the same list arrived as separate square slabs, each with its own
+   shadow, next to panels that were all rounded. The group takes the card and
+   the hairlines become separators inside it.
+
+   Scoped to lists that hold rows: .rows also carries verdict blocks, which
+   bring their own surface and would end up boxed twice. */
+:root[data-theme="kawaii"] .rows:has(> .row) {
+  background: var(--panel);
+  /* The same surface as a panel, since the two stack on several screens and
+     a different radius or edge on each read as two unrelated systems. */
+  border: var(--hairline) solid var(--hair-edge);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-card);
+  padding-inline: var(--s-4);
+  /* No overflow clip here on purpose: rows carry no fill of their own, and a
+     clip would cut the focus ring, which is drawn as a shadow. */
 }
