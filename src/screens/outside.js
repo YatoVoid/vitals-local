@@ -160,7 +160,9 @@ export function renderOutside(screen, { go, live }) {
     /* ---- Sun advice ---- */
     const sun = uv != null ? sunAdvice(uv, skinType) : null;
     if (sun) {
-      const box = panel(eyebrow(`What to do at UV ${Math.round(uv)}`));
+      /* The same figure as the reading above it. Rounding to a whole number
+         here put "UV 9" under a reading of 8.6 on the same screen. */
+      const box = panel(eyebrow(`What to do at UV ${Math.round(uv * 10) / 10}`));
       if (sun.spf) {
         box.appendChild(el('p', 'verdict-line', `SPF ${sun.spf} or higher`));
       } else {
