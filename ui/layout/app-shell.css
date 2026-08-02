@@ -1,0 +1,480 @@
+/* App shell.
+ *
+ * Three bands: a status strip, a scrolling screen, a tab bar. The strip and
+ * the bar never move, so the app keeps the shape a native wrapper expects
+ * and a screen can be swapped without touching the frame.
+ */
+
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--t-body);
+  line-height: var(--lh-body);
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+.app {
+  position: relative;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  /* When the tab bar is hidden the third row collapses on its own. */
+  block-size: 100dvh;
+  background:
+    radial-gradient(130% 60% at 50% 0%, var(--accent-wash), transparent 55%),
+    var(--bg);
+  overflow: hidden;
+}
+
+/* The measuring grid that makes flat dark space read as a display. */
+.app::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(var(--hair) var(--hairline), transparent var(--hairline)),
+    linear-gradient(90deg, var(--hair) var(--hairline), transparent var(--hairline));
+  background-size: 48px 48px;
+  opacity: 0.25;
+  pointer-events: none;
+}
+.app::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: var(--overlay);
+  pointer-events: none;
+  z-index: var(--z-banner);
+}
+
+/* ---- Status strip ---- */
+.statusbar {
+  position: relative;
+  z-index: var(--z-sticky);
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: calc(var(--s-2) + env(safe-area-inset-top)) var(--s-4) var(--s-2);
+  border-block-end: var(--hairline) solid var(--hair);
+  background: var(--bg-deep);
+  font-family: var(--font-mono);
+  font-size: var(--t-micro);
+  letter-spacing: var(--label-track);
+  text-transform: var(--label-transform);
+  color: var(--ink-dim);
+}
+.statusbar__dot {
+  inline-size: 6px;
+  block-size: 6px;
+  border-radius: var(--r-pill);
+  background: var(--accent);
+  box-shadow: var(--bloom);
+  animation: blip 2.4s var(--ease) infinite;
+}
+@keyframes blip { 0%, 70%, 100% { opacity: 1; } 82% { opacity: 0.2; } }
+.statusbar__title { color: var(--ink-mid); }
+.statusbar__end { margin-inline-start: auto; display: flex; gap: var(--s-3); }
+.statusbar__local {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+  color: var(--accent);
+  /* The label swaps between a word and a running count, so it holds its own
+     width rather than shoving the clock around every few hundred ms. */
+  font-variant-numeric: tabular-nums;
+}
+.statusbar__local[data-busy] { color: var(--ink-mid); }
+.statusbar__local[data-busy]::before {
+  content: "";
+  inline-size: 6px;
+  block-size: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: blip 1.4s infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .statusbar__local[data-busy]::before { animation: none; }
+}
+
+/* ---- Screen host ---- */
+.screens { position: relative; display: grid; overflow: hidden; }
+.screen {
+  grid-area: 1 / 1;
+  /* Full width so wheel events outside the content column still scroll it.
+     The column itself is an inner wrapper. */
+  inline-size: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  /* The instrument look does not survive a system scrollbar down the side.
+     Content still scrolls, and the shell never scrolls behind it. */
+  scrollbar-width: none;
+}
+.screen::-webkit-scrollbar { display: none; }
+
+/* The readable column lives inside the scroller. */
+.screen > .col,
+.screen .col {
+  inline-size: min(100%, 34rem);
+  margin-inline: auto;
+  padding: var(--s-5) var(--gutter) var(--s-8);
+}
+.screen[data-enter="forward"] { animation: screen-in-right var(--d-settle) var(--ease-out) both; }
+.screen[data-enter="back"]    { animation: screen-in-left var(--d-settle) var(--ease-out) both; }
+.screen[data-exit="forward"]  { animation: screen-out-left var(--d-settle) var(--ease) both; }
+.screen[data-exit="back"]     { animation: screen-out-right var(--d-settle) var(--ease) both; }
+@keyframes screen-in-right  { from { opacity: 0; transform: translate3d(4%, 0, 0); } }
+@keyframes screen-in-left   { from { opacity: 0; transform: translate3d(-4%, 0, 0); } }
+@keyframes screen-out-left  { to   { opacity: 0; transform: translate3d(-4%, 0, 0); } }
+@keyframes screen-out-right { to   { opacity: 0; transform: translate3d(4%, 0, 0); } }
+
+/* A screen that owns its own full-bleed layout, like the symptom console. */
+.screen--bleed { inline-size: 100%; padding: 0; overflow: hidden; }
+
+/* ---- Tab bar ---- */
+.tabs {
+  position: relative;
+  z-index: var(--z-nav);
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  background: var(--bg-deep);
+  border-block-start: var(--hairline) solid var(--hair-edge);
+  padding-block-end: env(safe-area-inset-bottom);
+}
+.tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-1);
+  min-block-size: 56px;
+  border: 0;
+  background: none;
+  color: var(--ink-dim);
+  font: inherit;
+  font-family: var(--font-mono);
+  font-size: var(--t-micro);
+  letter-spacing: var(--label-track);
+  text-transform: var(--label-transform);
+  cursor: pointer;
+  transition: color var(--d-quick) var(--ease);
+}
+.tab svg { inline-size: 20px; block-size: 20px; fill: none; stroke: currentColor; stroke-width: 1.5; }
+.tab:hover { color: var(--ink-mid); }
+.tab[aria-current="page"] { color: var(--accent); }
+/* A lit rail above the active tab. Position is the cue, colour reinforces. */
+.tab[aria-current="page"]::before {
+  content: "";
+  position: absolute;
+  inset-block-start: 0;
+  inline-size: 28px;
+  block-size: 2px;
+  background: var(--accent);
+  box-shadow: var(--bloom);
+}
+.tab { position: relative; }
+
+/* ---- Shared screen furniture ---- */
+/* An eyebrow marks a section. It is decoration and is meant to sit quietly
+   above a heading that carries the meaning. */
+.eyebrow {
+  margin: 0 0 var(--s-2);
+  font-family: var(--font-mono);
+  font-size: var(--t-micro);
+  letter-spacing: var(--label-track);
+  text-transform: var(--label-transform);
+  color: var(--ink-mid);
+}
+
+/* A field label names the control it sits above, so it reads at body size in
+   the body face, at full brightness, in sentence case. Tracked mono at eleven
+   pixels is a display flourish and the wrong tool here. */
+.field-label {
+  display: block;
+  margin: 0 0 var(--s-2);
+  font-family: var(--font-body);
+  font-size: var(--t-body);
+  font-weight: var(--w-strong);
+  letter-spacing: var(--tr-normal);
+  text-transform: none;
+  color: var(--ink);
+  line-height: var(--lh-snug);
+}
+.field-label__unit {
+  font-weight: var(--w-normal);
+  color: var(--ink-mid);
+}
+.col h1, .screen h1 {
+  font-size: var(--t-h1);
+  font-weight: var(--w-heavy);
+  letter-spacing: var(--tr-tight);
+  line-height: var(--lh-tight);
+  margin: 0 0 var(--s-5);
+  text-wrap: balance;
+}
+.col h2, .screen h2 {
+  font-size: var(--t-h3);
+  font-weight: var(--w-strong);
+  letter-spacing: var(--tr-tight);
+  margin: var(--s-6) 0 var(--s-3);
+}
+.col p, .screen p { margin: 0 0 var(--s-4); max-inline-size: var(--measure); text-wrap: pretty; }
+
+.panel {
+  position: relative;
+  background: var(--panel);
+  border: var(--hairline) solid var(--hair-edge);
+  border-radius: var(--r-md);
+  padding: var(--s-4);
+}
+/* Corner ticks. Drawn on a pseudo-element so a panel needs no extra markup. */
+.panel--ticked::before,
+.panel--ticked::after {
+  content: "";
+  position: absolute;
+  inline-size: var(--corner-len);
+  block-size: var(--corner-len);
+  border: 0 solid var(--hair-strong);
+  pointer-events: none;
+}
+.panel--ticked::before {
+  inset-block-start: -1px; inset-inline-start: -1px;
+  border-block-start-width: var(--hairline);
+  border-inline-start-width: var(--hairline);
+}
+.panel--ticked::after {
+  inset-block-end: -1px; inset-inline-end: -1px;
+  border-block-end-width: var(--hairline);
+  border-inline-end-width: var(--hairline);
+}
+
+.grid2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--s-3); }
+
+.readout-big {
+  font-family: var(--font-mono);
+  font-size: var(--t-readout);
+  font-weight: var(--w-strong);
+  line-height: 1;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+  text-shadow: var(--bloom-soft);
+}
+.readout-unit {
+  font-family: var(--font-mono);
+  font-size: var(--t-micro);
+  letter-spacing: var(--label-track);
+  text-transform: var(--label-transform);
+  color: var(--ink-dim);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-2);
+  min-block-size: var(--tap);
+  padding-inline: var(--s-5);
+  border: var(--hairline) solid transparent;
+  border-radius: var(--r-md);
+  background: var(--action-bg);
+  color: var(--action-ink);
+  font: inherit;
+  font-weight: var(--w-strong);
+  letter-spacing: var(--label-track);
+  cursor: pointer;
+  transition: background var(--d-quick) var(--ease), transform var(--d-instant) var(--ease);
+}
+.btn:hover { background: var(--action-bg-hover); }
+.btn:active { transform: translateY(1px); }
+.btn--quiet {
+  background: var(--action-quiet-bg);
+  color: var(--action-quiet-ink);
+  border-color: var(--hair);
+}
+.btn--quiet:hover { background: var(--inset); }
+.btn--block { inline-size: 100%; }
+.btn--danger { background: var(--sev-now); color: var(--sev-now-ink); }
+
+/* Horizontal chip strip. Scrolls sideways, never wraps into a wall.
+   A chip cut off by the viewport edge is the only cue that the strip
+   scrolls, so the mask fades the last one out instead of guillotining it. */
+.chiprow {
+  display: flex;
+  gap: var(--s-2);
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-block-end: var(--s-1);
+  margin-inline: calc(var(--gutter) * -1);
+  padding-inline: var(--gutter);
+  scroll-snap-type: inline proximity;
+  scroll-padding-inline: var(--gutter);
+  /* Fades both ends equally, so it reads the same under rtl where the strip
+     scrolls the other way. A gradient angle is not a logical property, so
+     symmetry is what makes this direction-agnostic. */
+  mask-image: linear-gradient(to right,
+    transparent 0, #000 var(--s-5),
+    #000 calc(100% - var(--s-5)), transparent 100%);
+}
+.chiprow::-webkit-scrollbar { display: none; }
+.chipbtn {
+  flex: 0 0 auto;
+  min-block-size: var(--tap);
+  padding-inline: var(--s-4);
+  border: var(--hairline) solid var(--hair-edge);
+  border-radius: var(--r-pill);
+  background: var(--panel);
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--t-small);
+  white-space: nowrap;
+  cursor: pointer;
+  scroll-snap-align: start;
+  transition:
+    border-color var(--d-quick) var(--ease),
+    color var(--d-quick) var(--ease),
+    transform var(--d-instant) var(--ease);
+}
+.chipbtn:hover { border-color: var(--accent); color: var(--accent); }
+/* Touch has no hover, so the press itself has to register. */
+.chipbtn:active { transform: scale(0.96); border-color: var(--accent); }
+
+.rows { display: grid; }
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  min-block-size: var(--tap);
+  padding: var(--s-3) 0;
+  border-block-end: var(--hairline) solid var(--hair);
+  text-align: start;
+  background: none;
+  border-inline: 0;
+  border-block-start: 0;
+  color: var(--ink);
+  font: inherit;
+  inline-size: 100%;
+  cursor: pointer;
+}
+.row:last-child { border-block-end: 0; }
+.row__end { margin-inline-start: auto; color: var(--ink-mid); font-family: var(--font-mono); }
+.row__sub { display: block; color: var(--ink-dim); font-size: var(--t-small); }
+.row[aria-selected="true"] { color: var(--accent); }
+
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-radius: var(--r-md);
+}
+
+.sr-only {
+  position: absolute;
+  inline-size: 1px; block-size: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden; clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ---- The content column widens in steps rather than stretching. Prose
+   still stops at --measure, so a wider column buys more room for grids and
+   rows without turning paragraphs into unreadable lines. ---- */
+@media (min-width: 46rem) {
+  .screen > .col,
+.screen .col { inline-size: min(100%, 42rem); padding-inline: var(--s-5); }
+  .grid2 { gap: var(--s-4); }
+}
+@media (min-width: 72rem) {
+  .screen > .col,
+.screen .col { inline-size: min(100%, 50rem); }
+  /* Four summary tiles read better as one row once there is room for it. */
+  .grid2 { grid-template-columns: repeat(4, 1fr); }
+}
+
+/* ---- Wide screens keep the mobile shape. The bar becomes a rail so the
+   thumb reach rule does not turn into a stretched desktop layout. ---- */
+@media (min-width: 64rem) {
+  .app {
+    grid-template-rows: auto 1fr;
+    grid-template-columns: 13rem 1fr;
+  }
+  .statusbar { grid-column: 1 / -1; }
+  .tabs {
+    grid-row: 2;
+    grid-column: 1;
+    grid-template-columns: 1fr;
+    align-content: start;
+    border-block-start: 0;
+    border-inline-end: var(--hairline) solid var(--hair-edge);
+    padding-block: var(--s-3);
+  }
+  .tab {
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: var(--s-3);
+    padding-inline: var(--s-4);
+    min-block-size: var(--tap);
+  }
+  .tab[aria-current="page"]::before {
+    inset-block-start: auto;
+    inset-inline-start: 0;
+    inline-size: 2px;
+    block-size: 24px;
+  }
+  .screens { grid-row: 2; grid-column: 2; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-motion="full"]) .app *,
+  :root:not([data-motion="full"]) .app *::before,
+  :root:not([data-motion="full"]) .app *::after {
+    animation: none !important;
+    transition-duration: 1ms !important;
+  }
+}
+:root[data-motion="reduced"] .app *,
+:root[data-motion="reduced"] .app *::before,
+:root[data-motion="reduced"] .app *::after {
+  animation: none !important;
+  transition-duration: 1ms !important;
+}
+
+/* `hidden` has to beat a display rule set by a class, or an element the
+   script hides stays on screen. */
+[hidden] { display: none !important; }
+
+/* An armed row states what the next press does. Amber, because it is a
+   warning about the tap rather than about the entry. */
+.row[data-armed] {
+  border-color: var(--sev-soon);
+  background: var(--sev-soon-wash);
+}
+.row[data-armed] .row__end {
+  color: var(--sev-soon);
+  font-size: var(--t-small);
+  white-space: nowrap;
+}
+
+/* A failure that has to be read before the next action. Sits above the tab
+   bar rather than over the content, so nothing is hidden behind it. */
+.notice {
+  position: absolute;
+  inset-inline: var(--gutter);
+  inset-block-end: calc(56px + var(--s-3) + env(safe-area-inset-bottom));
+  z-index: var(--z-banner);
+  display: grid;
+  gap: var(--s-2);
+  padding: var(--s-4);
+  border: var(--hairline) solid var(--sev-now);
+  border-inline-start-width: var(--rule-w-now);
+  border-radius: var(--r-md);
+  background: var(--bg-deep);
+  box-shadow: 0 8px 32px rgb(0 0 0 / 0.5);
+  animation: notice-in var(--d-settle) var(--ease-out) both;
+}
+.notice__head { font-weight: var(--w-strong); color: var(--sev-now); margin: 0; }
+.notice p { margin: 0; font-size: var(--t-small); }
+@keyframes notice-in { from { opacity: 0; transform: translate3d(0, var(--s-3), 0); } }

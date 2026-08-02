@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en" data-theme="med">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#06090C">
+<title>Vitals Local</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="ui/themes/tokens.css">
+<link rel="stylesheet" href="ui/layout/app-shell.css">
+<link rel="stylesheet" href="ui/layout/screens.css">
+<link rel="stylesheet" href="ui/components/symptom-game/symptom-game.css">
+</head>
+<body>
+<div id="root"></div>
+<script type="module">
+  import { boot } from './src/app/shell.js';
+  import { applySettings } from './src/app/store.js';
+  import * as i18n from './src/i18n/index.js';
+  import * as i18nEngine from './src/i18n/engine.js';
+  import * as i18nCache from './src/i18n/cache.js';
+  import * as i18nLangs from './src/i18n/languages.js';
+
+  applySettings();
+  boot(document.getElementById('root'));
+
+  /* Handles for the language check harness in tests/. Reading them from a
+     dynamic import inside eval resolves against the wrong base URL, so they
+     are hung on the window instead. Nothing in the app reads these. */
+  window.vitals = { i18n, i18nEngine, i18nCache, i18nLangs };
+
+  /* Keeps a copy of the app so it starts with no network. Registered from a
+     relative path so it works from a project subpath, and skipped on file://
+     where service workers are not allowed. */
+  if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register(new URL('sw.js', import.meta.url))
+        .catch(() => { /* the app works without it */ });
+    });
+  }
+</script>
+</body>
+</html>

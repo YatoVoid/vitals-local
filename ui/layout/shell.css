@@ -1,0 +1,195 @@
+/* Vitals Local, shell and primitives shared by every component.
+ * Consumes tokens.css. Adds no colour of its own.
+ */
+
+**::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--t-body);
+  line-height: var(--lh-body);
+  font-weight: var(--w-normal);
+  overflow-x: hidden;
+  text-rendering: optimizeLegibility;
+}
+
+/* The scanline wash belongs to the phosphor theme and is a no-op elsewhere,
+   so no component needs to know which theme is active. */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-image: var(--overlay);
+  pointer-events: none;
+  z-index: var(--z-banner);
+}
+
+h1, h2, h3 {
+  font-family: var(--font-display);
+  line-height: var(--lh-tight);
+  letter-spacing: var(--tr-tight);
+  margin: 0 0 var(--s-3);
+  text-wrap: balance;
+}
+h1 { font-size: var(--t-h1); font-weight: var(--w-heavy); }
+h2 { font-size: var(--t-h2); font-weight: var(--w-strong); }
+h3 { font-size: var(--t-h3); font-weight: var(--w-strong); }
+
+p { margin: 0 0 var(--s-4); max-inline-size: var(--measure); text-wrap: pretty; }
+p:last-child { margin-block-end: 0; }
+
+/* ---- Shell ---- */
+.shell {
+  min-block-size: 100dvh;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  padding-block-end: env(safe-area-inset-bottom);
+}
+
+.page {
+  inline-size: min(100%, 68rem);
+  margin-inline: auto;
+  padding: var(--s-5) var(--gutter) var(--s-8);
+}
+
+/* Single column is the default at every width. Two columns are opt-in and
+   collapse without a breakpoint of their own. */
+.split {
+  display: grid;
+  gap: var(--s-5);
+  grid-template-columns: repeat(auto-fit, minmax(min(20rem, 100%), 1fr));
+}
+
+.stack > * + * { margin-block-start: var(--stack); }
+
+/* ---- Severity rule ----
+ * The leading edge of every card states urgency before a word is read.
+ * Thickness carries it; colour reinforces. Mirrors under RTL because the
+ * edge is logical, not left.
+ */
+.card {
+  background: var(--panel-solid);
+  border: var(--hairline) solid var(--hair-edge);
+  border-inline-start: var(--hairline) solid var(--hair-edge);
+  border-radius: var(--r-lg);
+  padding: var(--card-pad);
+  box-shadow: var(--shadow-card);
+}
+.card[data-severity="soon"] {
+  border-inline-start-width: var(--rule-w-soon);
+  border-inline-start-color: var(--sev-soon);
+}
+.card[data-severity="now"] {
+  border-inline-start-width: var(--rule-w-now);
+  border-inline-start-color: var(--sev-now);
+  background: var(--sev-now-wash);
+}
+
+/* ---- Label: the small uppercase eyebrow that names a field or a rank.
+   Uppercase only where the theme asks for it, since uppercase is
+   unreadable in several phase-1 scripts. ---- */
+.label {
+  font-family: var(--font-mono);
+  font-size: var(--t-micro);
+  font-weight: var(--w-medium);
+  letter-spacing: var(--tr-wide);
+  text-transform: var(--label-transform);
+  color: var(--ink-dim);
+}
+:root:lang(ar) .label,
+:root:lang(bn) .label,
+:root:lang(th) .label,
+:root:lang(ko) .label,
+:root:lang(zh) .label,
+:root:lang(ja) .label { text-transform: none; letter-spacing: var(--tr-normal); }
+
+/* Every measured value renders in the mono face, so numbers line up in a
+   column and a unit never gets mistaken for prose. */
+.value { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+/* ---- Controls ---- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-2);
+  min-block-size: var(--tap);
+  padding-inline: var(--s-5);
+  border: var(--hairline) solid transparent;
+  border-radius: var(--r-md);
+  background: var(--action-bg);
+  color: var(--action-ink);
+  font: inherit;
+  font-weight: var(--w-strong);
+  letter-spacing: var(--label-track);
+  cursor: pointer;
+  transition: background var(--d-quick) var(--ease),
+              transform var(--d-instant) var(--ease);
+}
+.btn:hover { background: var(--action-bg-hover); }
+.btn:active { transform: translateY(1px); }
+.btn--quiet {
+  background: var(--action-quiet-bg);
+  color: var(--action-quiet-ink);
+  border-color: var(--hair);
+}
+.btn--quiet:hover { background: var(--inset); }
+
+/* A choice is a full-width target, not a checkbox someone has to hit. */
+.choice {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  min-block-size: var(--tap);
+  padding: var(--s-3) var(--s-4);
+  border: var(--hairline) solid var(--hair-edge);
+  border-radius: var(--r-md);
+  background: var(--panel-solid);
+  cursor: pointer;
+  transition: border-color var(--d-quick) var(--ease),
+              background var(--d-quick) var(--ease);
+}
+.choice:hover { border-color: var(--hair-strong); }
+.choice[aria-pressed="true"],
+.choice:has(:checked) {
+  border-color: var(--ink);
+  border-inline-start-width: var(--rule-w-soon);
+  background: var(--inset);
+}
+
+/* ---- Focus. One ring, visible in both themes, never removed. ---- */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-radius: var(--r-md);
+}
+
+/* ---- Screen reader only ---- */
+.sr-only {
+  position: absolute;
+  inline-size: 1px; block-size: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden; clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ---- CRT: characters settle in rather than appear.
+   Applies to headings only, never to text someone is mid-read. ---- */
+:root[data-theme="crt"] h1,
+:root[data-theme="crt"] h2 {
+  text-shadow: var(--bloom);
+  animation: settle var(--d-settle) var(--ease-out) both;
+}
+@keyframes settle {
+  from { opacity: 0; letter-spacing: 0.18em; filter: blur(1px); }
+  to   { opacity: 1; letter-spacing: var(--tr-tight); filter: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  :root[data-theme="crt"] h1,
+  :root[data-theme="crt"] h2 { animation: none; }
+}

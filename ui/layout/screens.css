@@ -1,0 +1,571 @@
+/* Screen level components: tiles, rings, fields, comparison columns.
+ * Consumes tokens.css and app-shell.css. Adds no colour of its own. */
+
+/* ---- Text size, set in Settings. Scales the whole type ramp at once. ---- */
+:root[data-text="large"] { font-size: 112.5%; }
+:root[data-text="xl"]    { font-size: 125%; }
+
+.lede { font-size: var(--t-lead); color: var(--ink-mid); }
+.hint { color: var(--ink-dim); font-size: var(--t-small); }
+.empty {
+  color: var(--ink-dim);
+  padding: var(--s-5) 0;
+  border-block: var(--hairline) dashed var(--hair);
+  text-align: center;
+}
+
+/* ---- Home tiles ---- */
+.tile2 {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s-1);
+  min-block-size: 7rem;
+  padding: var(--s-3);
+  border: var(--hairline) solid var(--hair-edge);
+  border-radius: var(--r-md);
+  background: var(--panel);
+  color: var(--ink);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  transition: border-color var(--d-quick) var(--ease);
+}
+.tile2:hover { border-color: var(--accent); }
+.tile2__val {
+  font-size: var(--t-h3);
+  font-weight: var(--w-strong);
+  letter-spacing: var(--tr-tight);
+  line-height: var(--lh-tight);
+}
+.tile2__sub { color: var(--ink-dim); font-size: var(--t-small); }
+.tile2--ring { align-items: center; justify-content: space-between; }
+
+/* ---- Ring gauge ---- */
+.ringbox { display: grid; justify-items: center; gap: var(--s-1); }
+.ring { position: relative; inline-size: 76px; block-size: 76px; }
+.ring svg { inline-size: 100%; block-size: 100%; transform: rotate(-90deg); }
+.ring__track { fill: none; stroke: var(--hair); stroke-width: 6; }
+.ring__arc {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 6;
+  stroke-linecap: butt;
+  filter: drop-shadow(0 0 4px var(--accent));
+  transition: stroke-dashoffset var(--d-settle) var(--ease-out);
+}
+.ring__mid {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+}
+.ring__val {
+  font-family: var(--font-mono);
+  font-size: var(--t-lead);
+  font-weight: var(--w-strong);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.ring__unit {
+  font-family: var(--font-mono);
+  font-size: var(--t-micro);
+  color: var(--ink-dim);
+  letter-spacing: var(--label-track);
+  text-transform: var(--label-transform);
+}
+
+/* ---- Fields ---- */
+.field {
+  inline-size: 100%;
+  min-block-size: var(--tap);
+  padding: var(--s-2) var(--s-3);
+  border: var(--hairline) solid var(--hair-edge);
+  border-radius: var(--r-md);
+  background: var(--inset);
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--t-body);
+}
+.field:focus { border-color: var(--accent); }
+.field::placeholder { color: var(--ink-dim); }
+.field--num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+.inline-form {
+  display: grid;
+  grid-template-columns: 1fr 5.5rem auto;
+  gap: var(--s-2);
+  margin-block-start: var(--s-3);
+}
+
+.field-row { display: grid; gap: var(--s-2); margin-block-end: var(--s-4); }
+
+/* ---- Water timeline ---- */
+.glasses {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  margin-block: var(--s-4);
+}
+.glass {
+  inline-size: 20px;
+  block-size: 30px;
+  border: var(--hairline) solid var(--hair-strong);
+  border-block-start: 0;
+  border-radius: 0 0 var(--r-sm) var(--r-sm);
+  background: transparent;
+  transition: background var(--d-quick) var(--ease);
+}
+.glass[data-full="1"] {
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent-wash);
+}
+
+/* ---- Medicine comparison ---- */
+.compare {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s-3);
+  margin-block: var(--s-4);
+}
+.compare__col {
+  padding: var(--s-3);
+  border: var(--hairline) solid var(--hair-edge);
+  border-radius: var(--r-md);
+  background: var(--panel);
+}
+.compare__field { display: grid; gap: var(--s-1); margin-block-end: var(--s-3); }
+.compare__field:last-child { margin-block-end: 0; }
+
+/* Verdict rows carry a mark as well as a colour, so the result survives
+   with colour removed. */
+.row[data-verdict] .row__end::before { margin-inline-end: var(--s-2); }
+.row[data-verdict="ok"]   { color: var(--ink); }
+.row[data-verdict="ok"]   .row__end { color: var(--accent); }
+.row[data-verdict="ok"]   .row__end::before { content: "="; }
+.row[data-verdict="warn"] .row__end { color: var(--sev-soon); }
+.row[data-verdict="warn"] .row__end::before { content: "~"; }
+.row[data-verdict="bad"]  .row__end { color: var(--sev-now); }
+.row[data-verdict="bad"]  .row__end::before { content: "!"; }
+.row:disabled { cursor: default; opacity: 1; }
+
+/* ---- Lab panels ---- */
+.lab { margin-block-end: var(--s-3); }
+.lab__line {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: var(--s-3);
+  margin-block: var(--s-2);
+}
+.lab__range {
+  font-family: var(--font-mono);
+  font-size: var(--t-small);
+  color: var(--ink-dim);
+  white-space: nowrap;
+}
+.lab__verdict {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--t-small);
+  color: var(--ink-mid);
+}
+.lab__src { margin-block-start: var(--s-2); }
+.lab__src summary {
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: var(--t-micro);
+  letter-spacing: var(--label-track);
+  text-transform: var(--label-transform);
+  color: var(--ink-dim);
+  min-block-size: var(--tap);
+  display: flex;
+  align-items: center;
+}
+.lab__src p { font-size: var(--t-small); color: var(--ink-mid); margin: 0; }
+
+/* Panels can carry severity the same way cards do. */
+.panel[data-severity="soon"] {
+  border-inline-start-width: var(--rule-w-soon);
+  border-inline-start-color: var(--sev-soon);
+}
+.panel[data-severity="now"] {
+  border-inline-start-width: var(--rule-w-now);
+  border-inline-start-color: var(--sev-now);
+  background: var(--sev-now-wash);
+}
+
+/* ---- Language grid ---- */
+.langgrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  margin-block-end: var(--s-4);
+}
+.langgrid .chipbtn[data-on="1"] {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-wash);
+}
+
+/* ---- Switch ---- */
+.switch {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  min-block-size: var(--tap);
+  cursor: pointer;
+}
+.switch input { position: absolute; opacity: 0; inline-size: 1px; block-size: 1px; }
+.switch__track {
+  margin-inline-start: auto;
+  inline-size: 40px;
+  block-size: 22px;
+  border: var(--hairline) solid var(--hair-strong);
+  border-radius: var(--r-pill);
+  position: relative;
+  transition: background var(--d-quick) var(--ease);
+}
+.switch__track::after {
+  content: "";
+  position: absolute;
+  inset-block-start: 2px;
+  inset-inline-start: 2px;
+  inline-size: 16px;
+  block-size: 16px;
+  border-radius: var(--r-pill);
+  background: var(--ink-dim);
+  transition: transform var(--d-quick) var(--ease), background var(--d-quick) var(--ease);
+}
+.switch input:checked ~ .switch__track { background: var(--accent-wash); border-color: var(--accent); }
+.switch input:checked ~ .switch__track::after {
+  transform: translateX(18px);
+  background: var(--accent);
+}
+.switch input:focus-visible ~ .switch__track { box-shadow: var(--focus-ring); }
+
+/* ---- Segmented control reuse from the symptom console ---- */
+.screen .views { margin-block-end: var(--s-3); }
+
+@media (max-width: 26rem) {
+  .compare { grid-template-columns: 1fr; }
+  .inline-form { grid-template-columns: 1fr auto; }
+  .inline-form .field--num { grid-column: 1; }
+}
+
+/* ---- Setup ---- */
+.dots { display: flex; gap: var(--s-2); margin-block-end: var(--s-4); }
+.dot {
+  inline-size: 28px;
+  block-size: 3px;
+  background: var(--hair);
+  transition: background var(--d-quick) var(--ease);
+}
+.dot[data-on="1"] { background: var(--accent); box-shadow: var(--bloom); }
+.setup__bar {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--s-3);
+  margin-block-start: var(--s-6);
+}
+
+/* ---- Fit guards ----
+ * The largest text setting scales the whole type ramp. These hold long
+ * strings inside their box rather than letting a row push past the screen.
+ */
+.row { gap: var(--s-3); }
+.row > span:first-child { min-inline-size: 0; }
+.row__end {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  max-inline-size: 45%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* A sub label can run long. Let it wrap rather than stretch the row. */
+.row__sub { overflow-wrap: anywhere; }
+
+/* Headings and readouts are the first things to overflow when a word has no
+   break opportunity, such as a long medicine name. */
+.screen h1, .screen h2, .card__head, .sheet__head, .tile2__val {
+  overflow-wrap: break-word;
+}
+.readout-big { overflow-wrap: anywhere; }
+
+/* A field must never be wider than its column, whatever the browser's
+   default input sizing says. */
+.field { min-inline-size: 0; max-inline-size: 100%; }
+.inline-form > * { min-inline-size: 0; }
+.compare__col { min-inline-size: 0; }
+
+/* The glass timeline wraps already; keep it from forcing a wider row when
+   the target is high. */
+.glasses { max-inline-size: 100%; }
+
+/* Ring labels are generated from numbers that can grow to five digits. */
+.ring__val { font-size: clamp(0.75rem, 0.6rem + 0.8vw, var(--t-lead)); }
+
+/* ---- Comparison verdicts ----
+ * Each result carries a mark, a colour, and a sentence saying why. The mark
+ * means the row still reads with colour removed.
+ */
+.verdict {
+  padding: var(--s-3) 0;
+  border-block-end: var(--hairline) solid var(--hair);
+}
+.verdict:last-child { border-block-end: 0; }
+.verdict__head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-3);
+  font-weight: var(--w-medium);
+}
+.verdict__mark {
+  margin-inline-start: auto;
+  font-family: var(--font-mono);
+  font-size: var(--t-small);
+  text-align: end;
+}
+.verdict__mark::before { margin-inline-end: var(--s-2); }
+.verdict[data-verdict="ok"]   .verdict__mark { color: var(--accent); }
+.verdict[data-verdict="ok"]   .verdict__mark::before { content: "="; }
+.verdict[data-verdict="warn"] .verdict__mark { color: var(--sev-soon); }
+.verdict[data-verdict="warn"] .verdict__mark::before { content: "~"; }
+.verdict[data-verdict="bad"]  .verdict__mark { color: var(--sev-now); }
+.verdict[data-verdict="bad"]  .verdict__mark::before { content: "!"; }
+.verdict__why {
+  margin: var(--s-2) 0 0;
+  font-size: var(--t-small);
+  color: var(--ink-mid);
+  max-inline-size: var(--measure);
+}
+
+/* ---- Pain over time ---- */
+.painchart {
+  margin-block: var(--s-3) var(--s-4);
+  padding: var(--s-3);
+  border: var(--hairline) solid var(--hair);
+  border-radius: var(--r-md);
+  background: var(--panel);
+}
+.painchart__svg { inline-size: 100%; block-size: 5.5rem; overflow: visible; }
+.painchart__mid { stroke: var(--hair); stroke-width: 0.4; stroke-dasharray: 2 2; }
+.painchart__line {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.4;
+  vector-effect: non-scaling-stroke;
+  filter: drop-shadow(0 0 4px var(--accent));
+}
+.painchart__dot { fill: var(--accent); }
+.painchart__axis {
+  display: flex;
+  justify-content: space-between;
+  margin-block-start: var(--s-2);
+  font-family: var(--font-mono);
+  font-size: var(--t-micro);
+  letter-spacing: var(--label-track);
+  text-transform: var(--label-transform);
+  color: var(--ink-dim);
+}
+
+/* A 0 to 10 row that stays tappable on a narrow phone. */
+.reading { display: grid; gap: var(--s-3); margin-block-end: var(--s-4); }
+.scale { display: grid; grid-template-columns: repeat(11, 1fr); gap: 2px; }
+.scale__step {
+  min-block-size: var(--tap);
+  padding: 0;
+  border: var(--hairline) solid var(--hair-edge);
+  border-radius: var(--r-sm);
+  background: var(--panel);
+  color: var(--ink-mid);
+  font-family: var(--font-mono);
+  font-size: var(--t-small);
+  cursor: pointer;
+  transition: background var(--d-quick) var(--ease), color var(--d-quick) var(--ease);
+}
+.scale__step:hover { border-color: var(--hair-strong); color: var(--ink); }
+.scale__step[aria-pressed="true"] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--action-ink);
+  font-weight: var(--w-strong);
+}
+.chipbtn[data-on="1"] {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-wash);
+}
+@media (max-width: 24rem) {
+  .scale { grid-template-columns: repeat(6, 1fr); }
+}
+
+/* ---- Search ---- */
+.searchbar { margin-block-end: var(--s-4); }
+.searchbar .field { font-size: var(--t-lead); }
+.results:not(:empty) { margin-block-end: var(--s-5); }
+
+/* A verdict is stated once, in a size that cannot be skimmed past. */
+.verdict-line {
+  font-family: var(--font-mono);
+  font-size: var(--t-h3);
+  font-weight: var(--w-strong);
+  letter-spacing: var(--label-track);
+  text-transform: var(--label-transform);
+  margin: 0 0 var(--s-2);
+  color: var(--ink);
+}
+.panel[data-claim="false"],
+.panel[data-claim="mostly false"] {
+  border-inline-start: var(--rule-w-soon) solid var(--sev-now);
+}
+.panel[data-claim="false"] .verdict-line,
+.panel[data-claim="mostly false"] .verdict-line { color: var(--sev-now); }
+.panel[data-claim="mixed"] { border-inline-start: var(--rule-w-soon) solid var(--sev-soon); }
+.panel[data-claim="mixed"] .verdict-line { color: var(--sev-soon); }
+.panel[data-claim="true"],
+.panel[data-claim="mostly true"] {
+  border-inline-start: var(--rule-w-soon) solid var(--accent);
+}
+.panel[data-claim="true"] .verdict-line,
+.panel[data-claim="mostly true"] .verdict-line { color: var(--accent); }
+
+/* ---- Body tab ----
+ * The tab holds its own column until a scan starts, at which point the
+ * console takes the whole screen.
+ */
+.bodytab { block-size: 100%; overflow-y: auto; scrollbar-width: none; }
+.bodytab::-webkit-scrollbar { display: none; }
+.bodytab--scanning { overflow: hidden; }
+.bodytab--scanning > .symptom-game { block-size: 100%; }
+
+.measures { display: grid; gap: var(--s-4); margin-block: var(--s-4); }
+.measures__field { display: grid; gap: var(--s-2); }
+
+/* A BMI number alone does not say how far from the range it is. */
+.bmibar { margin-block: var(--s-4); }
+.bmibar__track {
+  position: relative;
+  block-size: 10px;
+  border: var(--hairline) solid var(--hair-edge);
+  border-radius: var(--r-pill);
+  background: var(--inset);
+  overflow: hidden;
+}
+.bmibar__healthy {
+  position: absolute;
+  inset-block: 0;
+  background: var(--accent-wash);
+  border-inline: var(--hairline) solid var(--accent);
+}
+.bmibar__marker {
+  position: absolute;
+  inset-block: -4px;
+  inline-size: 3px;
+  margin-inline-start: -1px;
+  background: var(--ink);
+  box-shadow: 0 0 6px var(--bg);
+}
+.bmibar__axis {
+  display: flex;
+  justify-content: space-between;
+  margin-block-start: var(--s-2);
+  font-family: var(--font-mono);
+  font-size: var(--t-micro);
+  letter-spacing: var(--label-track);
+  color: var(--ink-dim);
+}
+
+/* Detail blocks that stay closed until asked for. */
+.caveats {
+  margin-block: var(--s-4);
+  border-block-start: var(--hairline) solid var(--hair);
+  padding-block-start: var(--s-3);
+}
+.caveats summary {
+  cursor: pointer;
+  min-block-size: var(--tap);
+  display: flex;
+  align-items: center;
+  font-family: var(--font-mono);
+  font-size: var(--t-micro);
+  letter-spacing: var(--label-track);
+  text-transform: var(--label-transform);
+  color: var(--ink-mid);
+}
+.caveats summary:hover { color: var(--accent); }
+.caveats p { font-size: var(--t-small); color: var(--ink-mid); }
+
+/* ---- Place picker ---- */
+.placebar {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-3);
+  border: var(--hairline) solid var(--hair-edge);
+  border-radius: var(--r-md);
+  background: var(--panel);
+  margin-block-end: var(--s-4);
+}
+.placebar__name {
+  font-family: var(--font-mono);
+  letter-spacing: var(--label-track);
+  text-transform: var(--label-transform);
+  font-size: var(--t-small);
+  color: var(--accent);
+}
+.placebar .chipbtn { margin-inline-start: auto; }
+.placesearch { margin-block-start: var(--s-3); }
+.placesearch__hits:not(:empty) { margin-block-start: var(--s-2); }
+
+/* ---- Script aware type ----
+ * Tracked uppercase is a Latin typographic device. It is unreadable in Arabic
+ * and Hebrew, meaningless in Han and Kana, and it breaks the conjuncts in
+ * Devanagari and the other Indic scripts, so it is switched off wholesale
+ * rather than patched rule by rule.
+ */
+:root[data-caps="off"] {
+  --label-transform: none;
+  --label-track: var(--tr-normal);
+}
+
+/* Scripts that need more vertical room than a Latin line box gives them. */
+:root[data-script="deva"], :root[data-script="beng"], :root[data-script="guru"],
+:root[data-script="taml"], :root[data-script="telu"], :root[data-script="gujr"],
+:root[data-script="thai"], :root[data-script="khmr"], :root[data-script="mymr"],
+:root[data-script="sinh"] {
+  --lh-tight: 1.35;
+  --lh-snug: 1.5;
+  --lh-body: 1.75;
+}
+:root[data-script="arab"], :root[data-script="hebr"] {
+  --lh-tight: 1.3;
+  --lh-body: 1.7;
+}
+/* Han and Kana carry more meaning per character, so they read better a
+   little larger and with a touch more leading. */
+:root[data-script="han"], :root[data-script="jpan"], :root[data-script="hang"] {
+  --t-body: clamp(1rem, 0.95rem + 0.2vw, 1.0625rem);
+  --lh-body: 1.7;
+}
+
+/* The English under a machine translated urgent line. Smaller, in the Latin
+   face, always left to right whatever the surrounding direction. */
+.i18n-original {
+  display: block;
+  margin-block-start: var(--s-1);
+  font-family: var(--font-ui);
+  font-size: var(--t-small);
+  color: var(--ink-mid);
+  opacity: 0.9;
+  direction: ltr;
+  text-align: start;
+}
+.i18n-original::before {
+  content: "EN ";
+  font-family: var(--font-mono);
+  font-size: var(--t-micro);
+  letter-spacing: var(--tr-wide);
+  color: var(--ink-dim);
+}

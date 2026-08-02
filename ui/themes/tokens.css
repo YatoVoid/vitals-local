@@ -1,0 +1,209 @@
+/* Vitals Local, token foundation.
+ *
+ * Two themes, one skeleton. Layout, spacing, and component structure never
+ * change between them; only colour, type, overlay, and radius do.
+ *
+ *   med  (default), slick medical instrument. Near-black cool ground, ice
+ *                    cyan hairlines, tight radii, wide-tracked mono labels.
+ *                    Precision and negative space carry the look, not glow.
+ *   crt           , phosphor green readout. Scanlines, bloom, zero radius.
+ *
+ * One rule survives both: red is not decoration. It appears when something
+ * is urgent and nowhere else, so it still stops a person when it shows up.
+ *
+ * Fonts are a system stack today. Dropping real faces in later is one
+ * @font-face block in this file plus the files under ui/assets/fonts.
+ */
+
+:root {
+  /* ---- Type ----
+   * Twenty languages across seven scripts rules out a display face with
+   * strong opinions. The character comes from weight, tracking, and the
+   * mono face carrying every measured value.
+   */
+  --font-ui: system-ui, -apple-system, "Segoe UI Variable Display", "Segoe UI",
+             Roboto, "Noto Sans", "Noto Sans Arabic", "Noto Sans Bengali",
+             "Noto Sans Thai", "Noto Sans KR", "Noto Sans SC", sans-serif;
+  --font-mono: ui-monospace, "Cascadia Mono", "SF Mono", "Roboto Mono",
+               "IBM Plex Mono", "Noto Sans Mono", Consolas, monospace;
+  --font-display: var(--font-ui);
+  --font-body: var(--font-ui);
+
+  --t-micro: 0.6875rem;
+  --t-small: 0.8125rem;
+  --t-body: clamp(0.9375rem, 0.9rem + 0.2vw, 1rem);
+  --t-lead: clamp(1.0625rem, 1rem + 0.35vw, 1.1875rem);
+  --t-h3: clamp(1.125rem, 1.02rem + 0.5vw, 1.3125rem);
+  --t-h2: clamp(1.375rem, 1.18rem + 0.9vw, 1.75rem);
+  --t-h1: clamp(1.75rem, 1.4rem + 1.6vw, 2.375rem);
+  --t-readout: clamp(2.5rem, 1.8rem + 3.4vw, 4rem);
+
+  --w-normal: 400;
+  --w-medium: 500;
+  --w-strong: 620;
+  --w-heavy: 760;
+
+  --lh-tight: 1.14;
+  --lh-snug: 1.32;
+  --lh-body: 1.55;
+
+  --tr-tight: -0.02em;
+  --tr-normal: 0;
+  --tr-wide: 0.14em;
+  --tr-hud: 0.22em;
+
+  --measure: 60ch;
+
+  /* ---- Space, base 4 ---- */
+  --s-1: 4px;  --s-2: 8px;  --s-3: 12px; --s-4: 16px;
+  --s-5: 24px; --s-6: 32px; --s-7: 48px; --s-8: 64px; --s-9: 96px;
+
+  --gutter: var(--s-4);
+  --stack: var(--s-4);
+  --card-pad: var(--s-5);
+  --tap: 44px;
+
+  /* Severity rule thickness. The primary channel: it survives colour loss. */
+  --rule-w-soon: 3px;
+  --rule-w-now: 5px;
+
+  /* ---- Motion ---- */
+  --d-instant: 90ms;
+  --d-quick: 160ms;
+  --d-settle: 240ms;
+  --ease: cubic-bezier(0.2, 0, 0.1, 1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+
+  --z-base: 0; --z-sticky: 10; --z-overlay: 40; --z-banner: 45;
+  --z-nav: 60; --z-modal: 80;
+}
+
+/* ================= med, default ================= */
+:root,
+:root[data-theme="med"] {
+  color-scheme: dark;
+
+  --bg: #06090C;
+  --bg-deep: #030507;
+  --panel: rgb(15 22 28 / 0.72);
+  --panel-solid: #0E161C;
+  --panel-raised: #142029;
+  --inset: #0A1116;
+
+  --ink: #E9F3F7;
+  --ink-mid: #A9BEC8;
+  --ink-dim: #7C9099;   /* 4.99:1 on panel-raised, 6.0:1 on bg */
+
+  --accent: #4DE1FF;
+  --accent-deep: #1B7C96;
+  --accent-wash: rgb(77 225 255 / 0.09);
+
+  --hair: rgb(140 205 226 / 0.34);        /* 2.2:1, for dividers inside a panel */
+  --hair-edge: rgb(150 210 230 / 0.52);   /* 3.2:1, for the edge of a control */
+  --hair-strong: rgb(165 220 238 / 0.7);  /* 4.6:1, for a hovered or active edge */
+
+  --sev-soon: #FFB020;
+  --sev-soon-wash: rgb(255 176 32 / 0.1);
+  --sev-now: #FF4D4D;
+  --sev-now-wash: rgb(255 77 77 / 0.12);
+  --sev-now-ink: #1A0405;
+
+  --focus: var(--accent);
+  --focus-ring: 0 0 0 1px var(--bg), 0 0 0 3px var(--accent);
+
+  --r-sm: 2px; --r-md: 4px; --r-lg: 8px; --r-pill: 999px;
+  --hairline: 1px;
+
+  /* The primary action is the accent filled; everything else is outline.
+     One filled thing per screen keeps the eye where the flow goes next. */
+  --action-bg: var(--accent);
+  --action-ink: #04161C;
+  --action-bg-hover: #7EEBFF;
+  --action-quiet-bg: transparent;
+  --action-quiet-ink: var(--ink);
+  --shadow-card: 0 1px 0 rgb(122 196 219 / 0.06) inset;
+
+  --overlay: none;
+  --bloom: 0 0 12px rgb(77 225 255 / 0.35);
+  --bloom-soft: 0 0 24px rgb(77 225 255 / 0.14);
+  --label-transform: uppercase;
+  --label-track: var(--tr-hud);
+  --corner-len: 10px;
+}
+
+/* ================= crt, retro green readout ================= */
+:root[data-theme="crt"] {
+  color-scheme: dark;
+
+  --bg: #030603;
+  --bg-deep: #010301;
+  --panel: rgb(7 18 9 / 0.82);
+  --panel-solid: #071209;
+  --panel-raised: #0C1D0F;
+  --inset: #050D06;
+
+  --ink: #CDF7D8;
+  --ink-mid: #8AD69E;
+  --ink-dim: #5FA271;   /* 5.8:1 on panel-raised */
+
+  --accent: #00FF66;
+  --accent-deep: #0A7D38;
+  --accent-wash: rgb(0 255 102 / 0.1);
+
+  --hair: rgb(0 255 102 / 0.3);
+  --hair-edge: rgb(0 255 102 / 0.45);
+  --hair-strong: rgb(90 255 150 / 0.75);
+
+  --sev-soon: #FFC53D;
+  --sev-soon-wash: rgb(255 197 61 / 0.12);
+  --sev-now: #FF5B4A;
+  --sev-now-wash: rgb(255 91 74 / 0.14);
+  --sev-now-ink: #140301;
+
+  --focus: #B6FFD0;
+  --focus-ring: 0 0 0 1px var(--bg), 0 0 0 2px var(--focus);
+
+  --r-sm: 0px; --r-md: 0px; --r-lg: 0px; --r-pill: 0px;
+  --hairline: 1px;
+
+  --action-bg: var(--accent);
+  --action-ink: #021007;
+  --action-bg-hover: #B6FFD0;
+  --action-quiet-bg: transparent;
+  --action-quiet-ink: var(--ink);
+  --shadow-card: none;
+
+  --overlay: repeating-linear-gradient(
+      to bottom,
+      rgb(0 255 102 / 0.055) 0 1px,
+      transparent 1px 3px);
+  --bloom: 0 0 10px rgb(0 255 102 / 0.5);
+  --bloom-soft: 0 0 28px rgb(0 255 102 / 0.2);
+  --label-transform: uppercase;
+  --label-track: var(--tr-hud);
+  --corner-len: 14px;
+
+  --font-ui: var(--font-mono);
+  --font-body: var(--font-mono);
+  --font-display: var(--font-mono);
+}
+
+/* Uppercase is unreadable in several phase-1 scripts. */
+:root:lang(ar), :root:lang(bn), :root:lang(th),
+:root:lang(ko), :root:lang(zh), :root:lang(ja) {
+  --label-transform: none;
+  --label-track: var(--tr-normal);
+}
+
+/* The Settings toggle stamps data-motion and must beat the media query
+   in both directions. */
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-motion="full"]) {
+    --d-instant: 1ms; --d-quick: 1ms; --d-settle: 1ms;
+    --overlay: none;
+  }
+}
+:root[data-motion="reduced"] {
+  --d-instant: 1ms; --d-quick: 1ms; --d-settle: 1ms;
+  --overlay: none;
+}

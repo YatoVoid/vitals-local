@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en" data-theme="med">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Symptom engine, body map</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="../../themes/tokens.css">
+<link rel="stylesheet" href="../../layout/shell.css">
+<link rel="stylesheet" href="symptom-game.css">
+<style>
+  body { margin: 0; }
+  /* Preview-only chrome. Sits at the bottom so it never covers the app's
+     own status strip. Not part of the product. */
+  .devbar {
+    position: fixed;
+    inset-block-end: 0;
+    inset-inline: 0;
+    z-index: 90;
+    display: flex;
+    justify-content: center;
+    gap: var(--s-1);
+    padding: var(--s-2);
+    background: var(--bg-deep);
+    border-block-start: var(--hairline) solid var(--hair);
+  }
+  .devbar button {
+    min-block-size: 36px;
+    padding-inline: var(--s-3);
+    border: var(--hairline) solid var(--hair);
+    border-radius: var(--r-md);
+    background: var(--panel-solid);
+    color: var(--ink);
+    font: inherit;
+    font-size: var(--t-micro);
+    letter-spacing: var(--label-track);
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<div class="devbar" role="group" aria-label="Preview controls">
+  <button id="theme" aria-pressed="false">CRT</button>
+  <button id="dir" aria-pressed="false">RTL</button>
+  <button id="motion" aria-pressed="false">Reduce motion</button>
+</div>
+
+<main class="symptom-game" id="app"></main>
+
+<script type="module">
+  import { mount } from './symptom-game.js';
+  mount(document.getElementById('app'));
+
+  const root = document.documentElement;
+  const wire = (id, on, off, apply) => {
+    const b = document.getElementById(id);
+    let active = false;
+    b.addEventListener('click', () => {
+      active = !active;
+      apply(active);
+      b.setAttribute('aria-pressed', String(active));
+      b.textContent = active ? off : on;
+    });
+  };
+
+  wire('theme', 'CRT', 'Medical', on => root.dataset.theme = on ? 'crt' : 'med');
+  wire('dir', 'RTL', 'LTR', on => root.dir = on ? 'rtl' : 'ltr');
+  wire('motion', 'Reduce motion', 'Full motion', on => root.dataset.motion = on ? 'reduced' : 'full');
+</script>
+</body>
+</html>

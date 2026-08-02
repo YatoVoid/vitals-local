@@ -1,0 +1,19 @@
+# Editors and OS
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+
+# Local scratch
+*.log
+tmp/
+scratch/
+
+# Screenshots and captures from local testing
+*.png
+*.webm
+
+# Python
+__pycache__/
+*.pyc

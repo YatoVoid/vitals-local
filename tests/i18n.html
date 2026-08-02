@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en" data-theme="med">
+<head>
+<meta charset="utf-8">
+<title>Language check</title>
+<link rel="icon" href="data:,">
+<style>
+  :root { color-scheme: dark; font-family: ui-monospace, Consolas, monospace; }
+  body { margin: 0; background: #0b0f12; color: #dbe7ec; padding: 16px; }
+  h1 { font-size: 15px; letter-spacing: .16em; text-transform: uppercase; color: #7f949e; margin: 0 0 4px; }
+  p.note { font-size: 12px; color: #7f949e; max-width: 78ch; line-height: 1.5; margin: 0 0 14px; }
+  .bar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-block-end: 14px; }
+  button, select { font: inherit; font-size: 12px; padding: 8px 12px; background: #16212a;
+           color: #dbe7ec; border: 1px solid #2b3d47; cursor: pointer; }
+  button:hover { border-color: #4DE1FF; color: #4DE1FF; }
+  table { border-collapse: collapse; font-size: 12px; width: 100%; max-width: 1100px; }
+  th, td { text-align: left; padding: 5px 10px; border-bottom: 1px solid #1c2830; vertical-align: top; }
+  th { color: #7f949e; font-weight: normal; position: sticky; top: 0; background: #0b0f12; }
+  .ok { color: #63d68b; } .warn { color: #ffb020; } .bad { color: #ff6b6b; }
+  .native { font-family: system-ui, sans-serif; font-size: 14px; }
+  iframe { width: 420px; height: 760px; border: 1px solid #2b3d47; background: #06090C; }
+  .stage { display: flex; gap: 16px; align-items: flex-start; margin-block-start: 16px; }
+  #log { font-size: 11px; color: #7f949e; max-height: 200px; overflow: auto; }
+</style>
+</head>
+<body>
+
+<h1>Language check</h1>
+<p class="note">
+  Runs the app in one language after another and reports how much of the text
+  actually changed. Untranslated counts the strings that came back identical to
+  the English. A few are expected: product names, single letters, and anything a
+  language borrows unchanged. A large number means that language is not really
+  working.
+</p>
+<p class="note">
+  Languages marked "pick by hand" have an on-device model that has not been
+  fetched yet. The browser only starts that download during a real tap, and
+  one tap is worth one model, so open the language screen, choose that
+  language once, then run this again.
+</p>
+
+<div class="bar">
+  <button id="probe">Check what this browser supports</button>
+  <button id="sample">Test 12 languages, one per script</button>
+  <button id="all">Test every language</button>
+  <button id="stop">Stop</button>
+  <span id="status" style="font-size:12px;color:#7f949e"></span>
+</div>
+
+<div class="stage">
+  <iframe id="app"></iframe>
+  <div style="flex:1">
+    <table id="out"><thead><tr>
+      <th>Language</th><th>Engine</th><th>Strings</th><th>Translated</th>
+      <th>Untranslated</th><th>Sample</th>
+    </tr></thead><tbody></tbody></table>
+    <div id="log"></div>
+  </div>
+</div>
+
+<script type="module">
+const frame = document.getElementById('app');
+frame.src = new URL('../index.html#/home', location.href).href;
+const tbody = document.querySelector('#out tbody');
+const statusEl = document.getElementById('status');
+const logEl = document.getElementById('log');
+let cancelled = false;
+
+const log = m => { logEl.textContent = m + '\n' + logEl.textContent.slice(0, 4000); };
+const wait = ms => new Promise(r => setTimeout(r, ms));
+
+async function ready() {
+  for (let i = 0; i < 80; i++) {
+    if (frame.contentWindow?.vitals && frame.contentWindow.document.querySelector('.app')) return true;
+    await wait(200);
+  }
+  return false;
+}
+
+/* Every route worth checking, including the ones only reachable by acting. */
+const ROUTES = ['#/home', '#/body', '#/track', '#/track/diet', '#/track/hydration',
+  '#/track/meds', '#/track/labs', '#/track/pain', '#/track/outside',
+  '#/learn', '#/learn/cancer', '#/learn/detox', '#/learn/protein',
+  '#/you', '#/you/settings', '#/you/profile'];
+
+/* Text that is the same word in most languages, or is not language at all.
+   Counting these as failures would make every language look broken. */
+const EXPECTED_SAME = /^(EN|OK|BMI|SPF|UV|AQI|kcal|ml|mg|kg|cm|PM2\.5|Vitals Local|[\d\s.,:%+\-/]+)$/i;
+
+function scan(doc) {
+  const strings = new Map();   // english -> shown
+  const walker = doc.createTreeWalker(doc.querySelector('.app'), NodeFilter.SHOW_TEXT, {
+    acceptNode(n) {
+      const t = (n.nodeValue ?? '').trim();
+      if (t.length < 3 || !/[A-Za-z]/.test(t)) return NodeFilter.FILTER_REJECT;
+      for (let el = n.parentElement; el; el = el.parentElement) {
+        if (el.getAttribute?.('translate') === 'no') return NodeFilter.FILTER_REJECT;
+        if (el.classList?.contains('i18n-original')) return NodeFilter.FILTER_REJECT;
+        if (['SCRIPT','STYLE','SVG'].includes(el.tagName)) return NodeFilter.FILTER_REJECT;
+      }
+      return NodeFilter.FILTER_ACCEPT;
+    },
+  });
+  for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+    const source = n.__i18nSource ?? n.nodeValue;
+    strings.set(source.trim(), (n.nodeValue ?? '').trim());
+  }
+  return strings;
+}
+
+async function testLanguage(code, name, english) {
+  const win = frame.contentWindow;
+  const { i18n, i18nEngine: engine, i18nCache: cache } = win.vitals;
+  const avail = await engine.onDeviceAvailability(code);
+  const mode = ['available','downloadable','downloading'].includes(avail) ? 'on device' : 'network';
+
+  await i18n.setLanguage(code);
+  win.dispatchEvent(new win.CustomEvent('vitals:language'));
+
+  /* Walk once to discover what the app puts on screen, then translate the
+     whole set in one batch. Polling each route until it settles took minutes
+     per language and told us nothing extra. */
+  const seen = new Set();
+  for (const route of ROUTES) {
+    if (cancelled) break;
+    win.location.hash = route;
+    await wait(260);
+    for (const [src] of scan(win.document)) seen.add(src);
+  }
+
+  /* A model that is not on the machine yet can only be fetched during a real
+     tap, and one tap buys one model. Nothing scripted can stand in for that,
+     so this run reports which languages need picking by hand rather than
+     failing them and calling the language broken. */
+  if (mode === 'on device' && avail !== 'available') {
+    return { code, name, english, mode: 'pick by hand',
+             total: 0, translated: 0, untranslated: 0,
+             sample: ['tap this language once to fetch its model'] };
+  }
+
+  if (mode === 'on device') {
+    const list = [...seen].filter(t => !EXPECTED_SAME.test(t));
+    const t0 = performance.now();
+    const results = await engine.translateBatch(list, code, { allowNetwork: false });
+    cache.putMany(code, [...results.entries()]);
+    log(`${code}: ${results.size}/${list.length} in ${Math.round(performance.now() - t0)}ms`);
+  }
+
+  /* Now walk again. Everything cached lands on the frame it renders. */
+  const all = new Map();
+  for (const route of ROUTES) {
+    if (cancelled) break;
+    win.location.hash = route;
+    await wait(320);
+    for (const [k, v] of scan(win.document)) all.set(k, v);
+  }
+
+  const rows = [...all.entries()].filter(([src]) => !EXPECTED_SAME.test(src));
+  const same = rows.filter(([src, shown]) => src === shown);
+  return {
+    code, name, english, mode,
+    total: rows.length,
+    translated: rows.length - same.length,
+    untranslated: same.length,
+    sample: same.slice(0, 3).map(([s]) => s.slice(0, 40)),
+  };
+}
+
+function addRow(r) {
+  const tr = document.createElement('tr');
+  const pct = r.total ? Math.round((r.translated / r.total) * 100) : 0;
+  const cls = pct >= 97 ? 'ok' : pct >= 80 ? 'warn' : 'bad';
+  tr.innerHTML =
+    `<td class="native">${r.name}<br><span style="color:#7f949e;font-size:11px">${r.english}</span></td>` +
+    `<td>${r.mode}</td><td>${r.total}</td>` +
+    `<td class="${cls}">${r.translated} (${pct}%)</td>` +
+    `<td class="${r.untranslated ? 'warn' : 'ok'}">${r.untranslated}</td>` +
+    `<td style="color:#7f949e">${r.sample.join(' | ')}</td>`;
+  tbody.appendChild(tr);
+}
+
+async function run(codes) {
+  cancelled = false;
+  tbody.replaceChildren();
+  if (!await ready()) { statusEl.textContent = 'app did not load'; return; }
+  const { LANGUAGES } = frame.contentWindow.vitals.i18nLangs;
+  const list = LANGUAGES.filter(l => codes.includes(l.code));
+  for (const l of list) {
+    if (cancelled) break;
+    statusEl.textContent = `testing ${l.english}...`;
+    log(`start ${l.code}`);
+    try {
+      addRow(await testLanguage(l.code, l.name, l.english));
+    } catch (e) {
+      log(`${l.code} failed: ${e.message}`);
+      addRow({ code: l.code, name: l.name, english: l.english, mode: 'error',
+               total: 0, translated: 0, untranslated: 0, sample: [String(e.message).slice(0, 40)] });
+    }
+  }
+  statusEl.textContent = cancelled ? 'stopped' : 'done';
+}
+
+document.getElementById('probe').addEventListener('click', async () => {
+  if (!await ready()) return;
+  const win = frame.contentWindow;
+  const { LANGUAGES } = win.vitals.i18nLangs;
+  const engine = win.vitals.i18nEngine;
+  const caps = await engine.capabilityMap(LANGUAGES.map(l => l.code));
+  const onDevice = [...caps.entries()].filter(([, v]) => v === 'ondevice').length;
+  statusEl.textContent = `${onDevice} of ${LANGUAGES.length} translate on this device, the rest need the network`;
+  tbody.replaceChildren();
+  for (const l of LANGUAGES) {
+    const mode = caps.get(l.code);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td class="native">${l.name}<br><span style="color:#7f949e;font-size:11px">${l.english}</span></td>` +
+      `<td class="${mode === 'ondevice' ? 'ok' : mode === 'source' ? 'ok' : 'warn'}">${mode}</td>` +
+      `<td colspan="4" style="color:#7f949e">${l.code}${l.engine ? ' via ' + l.engine : ''}</td>`;
+    tbody.appendChild(tr);
+  }
+});
+
+/* One language per writing system, which is where rendering breaks. */
+const SAMPLE = ['zh-Hans','ja','ko','hi','bn','ta','ar','he','ru','el','th','de'];
+document.getElementById('sample').addEventListener('click', () => run(SAMPLE));
+document.getElementById('all').addEventListener('click', async () => {
+  const { LANGUAGES } = frame.contentWindow.vitals.i18nLangs;
+  run(LANGUAGES.filter(l => l.code !== 'en').map(l => l.code));
+});
+document.getElementById('stop').addEventListener('click', () => { cancelled = true; });
+</script>
+</body>
+</html>

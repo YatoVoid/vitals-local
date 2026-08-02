@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="en" data-theme="med">
+<head>
+<meta charset="utf-8">
+<title>Accessibility audit</title>
+<link rel="icon" href="data:,">
+<style>
+  :root { color-scheme: dark; font-family: ui-monospace, Consolas, monospace; }
+  body { margin: 0; background: #0b0f12; color: #dbe7ec; padding: 16px; }
+  h1 { font-size: 15px; letter-spacing: .16em; text-transform: uppercase; color: #7f949e; margin: 0 0 4px; }
+  p.note { font-size: 12px; color: #7f949e; max-width: 80ch; line-height: 1.5; margin: 0 0 14px; }
+  .bar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-block-end: 14px; }
+  button, select { font: inherit; font-size: 12px; padding: 8px 12px; background: #16212a;
+           color: #dbe7ec; border: 1px solid #2b3d47; cursor: pointer; }
+  button:hover { border-color: #4DE1FF; color: #4DE1FF; }
+  table { border-collapse: collapse; font-size: 12px; width: 100%; }
+  th, td { text-align: left; padding: 5px 10px; border-bottom: 1px solid #1c2830; vertical-align: top; }
+  th { color: #7f949e; font-weight: normal; position: sticky; top: 0; background: #0b0f12; }
+  .ok { color: #63d68b; } .bad { color: #ff6b6b; } .warn { color: #ffb020; }
+  iframe { width: 390px; height: 844px; border: 1px solid #2b3d47; background: #06090C; }
+  .stage { display: flex; gap: 16px; align-items: flex-start; }
+  #summary { font-size: 13px; margin-block: 10px; }
+</style>
+</head>
+<body>
+
+<h1>Accessibility audit</h1>
+<p class="note">
+  Walks every route in both themes and reports text contrast below the WCAG AA
+  floor (4.5:1, or 3:1 for large text), controls smaller than 44px on their
+  short axis, elements wider than the viewport, and controls with no
+  accessible name. The run starts by planting a known-bad node and confirming
+  the checker catches it, because a checker that silently measures nothing
+  reports a clean sheet.
+</p>
+
+<div class="bar">
+  <button id="run">Run the audit</button>
+  <select id="size">
+    <option value="390x844">390 x 844, phone</option>
+    <option value="360x640">360 x 640, small phone</option>
+    <option value="768x1024">768 x 1024, tablet 4:3</option>
+    <option value="1024x768">1024 x 768, landscape 4:3</option>
+  </select>
+  <span id="status" style="font-size:12px;color:#7f949e"></span>
+</div>
+
+<div id="summary"></div>
+
+<div class="stage">
+  <iframe id="app"></iframe>
+  <div style="flex:1">
+    <table id="out"><thead><tr>
+      <th>Theme</th><th>Route</th><th>Kind</th><th>Element</th><th>Detail</th>
+    </tr></thead><tbody></tbody></table>
+  </div>
+</div>
+
+<script type="module">
+const frame = document.getElementById('app');
+const tbody = document.querySelector('#out tbody');
+const statusEl = document.getElementById('status');
+const summaryEl = document.getElementById('summary');
+const wait = ms => new Promise(r => setTimeout(r, ms));
+
+const ROUTES = ['#/home','#/body','#/track','#/track/pain','#/track/diet','#/track/hydration',
+  '#/track/meds','#/track/labs','#/track/outside','#/learn','#/learn/cancer','#/learn/detox',
+  '#/you','#/you/settings','#/you/profile','#/you/language','#/setup'];
+
+/* ---- Colour maths, sRGB relative luminance per WCAG 2.1 ---- */
+const srgb = c => { c /= 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; };
+const lum = ([r, g, b]) => 0.2126 * srgb(r) + 0.7152 * srgb(g) + 0.0722 * srgb(b);
+const parse = s => (s.match(/[\d.]+/g) ?? []).map(Number);
+const ratio = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((m, n) => n - m); return (x + 0.05) / (y + 0.05); };
+const blend = (fg, bg, a) => fg.map((c, i) => c * a + bg[i] * (1 - a));
+
+function bgOf(win, el) {
+  let n = el;
+  while (n && n !== win.document.documentElement) {
+    const c = parse(win.getComputedStyle(n).backgroundColor);
+    if (c.length >= 3 && (c[3] === undefined || c[3] > 0.85)) return c.slice(0, 3);
+    n = n.parentElement;
+  }
+  return parse(win.getComputedStyle(win.document.body).backgroundColor).slice(0, 3);
+}
+
+function scanContrast(win) {
+  const out = [];
+  const seen = new Set();
+  win.document.querySelectorAll('.app *').forEach(el => {
+    if (!el.textContent?.trim() || el.children.length) return;
+    const r = el.getBoundingClientRect();
+    if (!r.width || !r.height) return;
+    const cs = win.getComputedStyle(el);
+    if (cs.visibility === 'hidden' || cs.opacity === '0') return;
+    const fg = parse(cs.color);
+    const alpha = fg[3] ?? 1;
+    const bg = bgOf(win, el);
+    const eff = alpha < 1 ? blend(fg.slice(0, 3), bg, alpha) : fg.slice(0, 3);
+    const cr = ratio(eff, bg);
+    const px = parseFloat(cs.fontSize);
+    const large = px >= 24 || (px >= 18.66 && parseInt(cs.fontWeight, 10) >= 700);
+    const floor = large ? 3 : 4.5;
+    if (cr >= floor) return;
+    const key = `${cs.color}|${cs.fontSize}|${el.className}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    out.push({ kind: 'contrast', el: (el.className || el.tagName).toString().slice(0, 30),
+               detail: `${cr.toFixed(2)}:1, needs ${floor}:1, "${el.textContent.trim().slice(0, 26)}"` });
+  });
+  return out;
+}
+
+function scanTargets(win) {
+  const out = [];
+  win.document.querySelectorAll('.app button, .app a[href], .app input, .app select, .app [role="button"]')
+    .forEach(el => {
+      const r = el.getBoundingClientRect();
+      if (!r.width || !r.height) return;
+      // The body map states its own exception in docs/ARCHITECTURE.md.
+      if (el.closest('.bodymap')) return;
+      const short = Math.min(r.width, r.height);
+      if (short < 44) {
+        out.push({ kind: 'tap target', el: (el.className || el.tagName).toString().slice(0, 30),
+                   detail: `${Math.round(r.width)}x${Math.round(r.height)}, short axis ${Math.round(short)}px` });
+      }
+    });
+  return out;
+}
+
+function scanNames(win) {
+  const out = [];
+  win.document.querySelectorAll('.app button, .app a[href], .app input, .app select').forEach(el => {
+    const r = el.getBoundingClientRect();
+    if (!r.width || !r.height) return;
+    const name = (el.getAttribute('aria-label') || el.textContent || '').trim()
+      || (el.labels?.[0]?.textContent ?? '').trim()
+      || (el.getAttribute('title') ?? '').trim();
+    if (!name) {
+      out.push({ kind: 'no name', el: (el.className || el.tagName).toString().slice(0, 30),
+                 detail: el.outerHTML.slice(0, 60) });
+    }
+  });
+  return out;
+}
+
+function scanOverflow(win) {
+  const out = [];
+  const doc = win.document.scrollingElement;
+  const over = doc.scrollWidth - doc.clientWidth;
+  if (over > 1) out.push({ kind: 'overflow', el: 'document', detail: `${over}px wider than viewport` });
+  win.document.querySelectorAll('.app *').forEach(el => {
+    const r = el.getBoundingClientRect();
+    if (r.width > win.innerWidth + 1 && win.getComputedStyle(el).overflowX === 'visible') {
+      out.push({ kind: 'overflow', el: (el.className || el.tagName).toString().slice(0, 30),
+                 detail: `${Math.round(r.width)}px in a ${win.innerWidth}px viewport` });
+    }
+  });
+  return out;
+}
+
+function addRow(theme, route, f) {
+  const tr = document.createElement('tr');
+  tr.innerHTML = `<td>${theme}</td><td>${route}</td>`
+    + `<td class="bad">${f.kind}</td><td>${f.el}</td>`
+    + `<td style="color:#7f949e">${f.detail.replace(/</g, '&lt;')}</td>`;
+  tbody.appendChild(tr);
+}
+
+/* Load the app and wait for it to be genuinely ready.
+ *
+ * Polling for `.app` straight after setting src matches the *previous*
+ * document, which is still in contentWindow until navigation commits. The
+ * load event is the only reliable line between the two. */
+async function load(src) {
+  await new Promise(resolve => {
+    frame.addEventListener('load', resolve, { once: true });
+    frame.src = src;
+  });
+  for (let i = 0; i < 80; i++) {
+    const win = frame.contentWindow;
+    if (win?.document?.querySelector('.app') && win.location.href.includes('audit=')) return true;
+    await wait(200);
+  }
+  return false;
+}
+
+const runBtn = document.getElementById('run');
+
+runBtn.addEventListener('click', async () => {
+  if (runBtn.disabled) return;
+  runBtn.disabled = true;
+  tbody.replaceChildren();
+  summaryEl.textContent = '';
+  statusEl.textContent = 'starting';
+
+  try {
+    await runAudit();
+  } catch (err) {
+    statusEl.textContent = 'the run failed';
+    summaryEl.innerHTML = `<span class="bad">The audit threw: ${String(err.message).slice(0, 120)}. `
+      + 'Treat this run as meaningless.</span>';
+  } finally {
+    runBtn.disabled = false;
+  }
+});
+
+async function runAudit() {
+  const [w, h] = document.getElementById('size').value.split('x');
+  frame.style.width = `${w}px`;
+  frame.style.height = `${h}px`;
+
+  statusEl.textContent = 'loading the app...';
+  if (!await load(new URL(`../index.html?audit=${Date.now()}#/home`, location.href).href)) {
+    throw new Error('the app did not load');
+  }
+  await wait(1200);
+
+  const win = frame.contentWindow;
+
+  /* Prove the contrast checker works before trusting a clean result. */
+  const host = win.document.querySelector('.app');
+  if (!host) throw new Error('the app shell was not there to test against');
+  const probe = win.document.createElement('p');
+  probe.textContent = 'checker self test';
+  probe.style.cssText = 'color:#3a3a3a;background:#2f2f2f;font-size:14px';
+  host.appendChild(probe);
+  await wait(120);
+  const selfTest = scanContrast(win).some(f => f.detail.includes('checker self'));
+  probe.remove();
+  await wait(120);
+
+  let total = 0;
+  for (const theme of ['med', 'crt']) {
+    win.document.documentElement.dataset.theme = theme;
+    for (const route of ROUTES) {
+      statusEl.textContent = `${theme} ${route}`;
+      win.location.hash = route;
+      await wait(600);
+      for (const f of [...scanContrast(win), ...scanTargets(win),
+                       ...scanNames(win), ...scanOverflow(win)]) {
+        addRow(theme, route, f);
+        total++;
+      }
+    }
+  }
+
+  statusEl.textContent = 'done';
+  summaryEl.innerHTML = selfTest
+    ? (total === 0
+        ? `<span class="ok">Self test passed. Nothing failed across both themes at ${w} x ${h}, ${ROUTES.length} routes each.</span>`
+        : `<span class="bad">${total} findings at ${w} x ${h}.</span> Self test passed, so these are real.`)
+    : '<span class="warn">The self test did not catch a known-bad node. Treat this run as meaningless and fix the checker.</span>';
+}
+</script>
+</body>
+</html>

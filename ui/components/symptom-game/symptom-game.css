@@ -1,0 +1,820 @@
+/* Symptom console.
+ *
+ * Carries its own box-sizing reset. The console mounts both inside the app
+ * shell and on its own under tests/, so it cannot inherit the reset from
+ * app-shell.css without every padded box coming out 32px too wide.
+ *
+ * A medical instrument, not a form. The body is the screen; everything else
+ * is chrome around it, hairlines, corner ticks, tracked mono readouts, a
+ * scan sweep. Colour stays back so the accent marks the active element and
+ * amber and red keep their meaning.
+ *
+ * Everything that moves moves on transform or opacity, so the compositor
+ * carries it and a mid-range phone keeps its frame budget.
+ */
+
+.symptom-game,
+.symptom-game *,
+.symptom-game *::before,
+.symptom-game *::after { box-sizing: border-box; }
+
+.symptom-game {
+  /* The brief's theme contract, aliased onto the product tokens so this
+     feature and the rest of the app cannot drift apart. */
+  --panel: var(--panel-solid);
+  --text: var(--ink);
+  --accent2: var(--ink-mid);
+  --border: var(--hair);
+
+  position: relative;
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+  min-block-size: 100dvh;
+  background:
+    radial-gradient(120% 70% at 50% 0%, var(--accent-wash), transparent 60%),
+    var(--bg);
+  color: var(--text);
+  overflow: hidden;
+  padding-block-end: env(safe-area-inset-bottom);
+}
+
+/* Faint measuring grid, to give the dark field the character of a display. */
+.symptom-game::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(var(--hair) var(--hairline), transparent var(--hairline)),
+    linear-gradient(90deg, var(--hair) var(--hairline), transparent var(--hairline));
+  background-size: 48px 48px;
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+/* Scanlines belong to the container so a component preview carries them. */
+.symptom-game::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: var(--overlay);
+  pointer-events: none;
+  z-index: var(--z-banner);
+}
+
+/* ---- Status strip ---- */
+.hud {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-3) var(--s-4);
+  border-block-end: var(--hairline) solid var(--hair);
+  font-family: var(--font-mono);
+  font-size: var(--t-micro);
+  letter-spacing: var(--label-track);
+  text-transform: var(--label-transform);
+  color: var(--ink-dim);
+}
+.hud__dot {
+  inline-size: 6px;
+  block-size: 6px;
+  border-radius: var(--r-pill);
+  background: var(--accent);
+  box-shadow: var(--bloom);
+  animation: blip 2.4s var(--ease) infinite;
+}
+@keyframes blip { 0%, 70%, 100% { opacity: 1; } 82% { opacity: 0.2; } }
+.hud__spacer { margin-inline-start: auto; }
+.hud__val { color: var(--ink-mid); }
+
+/* ---- Progress: segments, not a smooth fill ---- */
+.meter {
+  display: flex;
+  gap: 2px;
+  padding: 0 var(--s-4) var(--s-2);
+}
+.meter__seg {
+  block-size: 2px;
+  flex: 1;
+  background: var(--hair);
+  transition: background var(--d-quick) var(--ease);
+}
+.meter__seg[data-on="1"] { background: var(--accent); box-shadow: var(--bloom); }
+
+/* ---- Stage ---- */
+.stage-host { position: relative; display: grid; overflow: hidden; }
+.stage {
+  grid-area: 1 / 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  padding: var(--s-4) var(--gutter) var(--s-6);
+  inline-size: min(100%, 32rem);
+  margin-inline: auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.stage__eyebrow { margin: 0; display: flex; align-items: center; gap: var(--s-2); }
+.stage__title {
+  font-size: var(--t-h2);
+  font-weight: var(--w-strong);
+  letter-spacing: var(--tr-tight);
+  margin: 0;
+  text-wrap: balance;
+}
+.stage__footer {
+  display: flex;
+  gap: var(--s-3);
+  margin-block-start: auto;
+  padding-block-start: var(--s-4);
+}
+.stage__next { flex: 1; }
+.stage__next:disabled { opacity: 0.32; cursor: not-allowed; }
+
+.stage[data-enter="forward"] { animation: in-right var(--d-settle) var(--ease-out) both; }
+.stage[data-enter="back"]    { animation: in-left  var(--d-settle) var(--ease-out) both; }
+.stage[data-exit="forward"]  { animation: out-left var(--d-settle) var(--ease) both; }
+.stage[data-exit="back"]     { animation: out-right var(--d-settle) var(--ease) both; }
+
+@keyframes in-right  { from { opacity: 0; transform: translate3d(5%, 0, 0); } }
+@keyframes in-left   { from { opacity: 0; transform: translate3d(-5%, 0, 0); } }
+@keyframes out-left  { to   { opacity: 0; transform: translate3d(-5%, 0, 0); } }
+@keyframes out-right { to   { opacity: 0; transform: translate3d(5%, 0, 0); } }
+
+/* ---- View selector: four states, one control ---- */
+.views {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  border: var(--hairline) solid var(--hair);
+  border-radius: var(--r-md);
+  overflow: hidden;
+}
+.views button {
+  min-block-size: var(--tap);
+  padding-inline: var(--s-2);
+  border: 0;
+  border-inline-start: var(--hairline) solid var(--hair-edge);
+  background: transparent;
+  /* Readable by default. These are choices someone taps, not chrome. */
+  color: var(--ink-mid);
+  font: inherit;
+  font-family: var(--font-body);
+  font-size: var(--t-body);
+  font-weight: var(--w-medium);
+  letter-spacing: var(--tr-normal);
+  text-transform: none;
+  cursor: pointer;
+  transition: color var(--d-quick) var(--ease), background var(--d-quick) var(--ease);
+}
+
+/* The four view switch on the body map is instrumentation, so it keeps the
+   tracked mono treatment. Nothing else does. */
+.views--hud button {
+  font-family: var(--font-mono);
+  font-size: var(--t-micro);
+  letter-spacing: var(--label-track);
+  text-transform: var(--label-transform);
+}
+.views button:first-child { border-inline-start: 0; }
+.views button:hover { color: var(--ink-mid); }
+.views button[aria-pressed="true"] {
+  color: var(--accent);
+  background: var(--accent-wash);
+  box-shadow: inset 0 -2px 0 var(--accent);
+  font-weight: var(--w-strong);
+}
+
+/* ---- BodyMap ---- */
+.bodymap {
+  position: relative;
+  display: grid;
+  /* The svg stretches to the whole area and centres the figure itself with
+     preserveAspectRatio. Centring the box instead caps the figure at its
+     intrinsic size, leaving 40% of the area unused and every tap target
+     smaller than it has to be. */
+  grid-template: 1fr / 1fr;
+  flex: 1;
+  min-block-size: 0;
+}
+
+/* Corner ticks frame the figure the way a viewfinder frames a subject. */
+.bodymap__frame { position: absolute; inset: 0; pointer-events: none; }
+.bodymap__frame span {
+  position: absolute;
+  inline-size: var(--corner-len);
+  block-size: var(--corner-len);
+  border: 0 solid var(--hair-strong);
+}
+.bodymap__frame span:nth-child(1) { inset-block-start: 0; inset-inline-start: 0; border-block-start-width: var(--hairline); border-inline-start-width: var(--hairline); }
+.bodymap__frame span:nth-child(2) { inset-block-start: 0; inset-inline-end: 0;   border-block-start-width: var(--hairline); border-inline-end-width: var(--hairline); }
+.bodymap__frame span:nth-child(3) { inset-block-end: 0;   inset-inline-start: 0; border-block-end-width: var(--hairline);   border-inline-start-width: var(--hairline); }
+.bodymap__frame span:nth-child(4) { inset-block-end: 0;   inset-inline-end: 0;   border-block-end-width: var(--hairline);   border-inline-end-width: var(--hairline); }
+
+.bodymap__svg {
+  grid-area: 1 / 1;
+  inline-size: 100%;
+  block-size: 100%;
+  /* A definite box, not an intrinsic one. Percentages resolve because the
+     grid area is definite and the item is stretched into it. */
+  min-inline-size: 0;
+  min-block-size: 0;
+  /* Clipped, not visible. Under a zoom crop the rest of the figure is still
+     drawn, and left visible it spills over the surrounding controls and stays
+     clickable outside the frame. */
+  overflow: hidden;
+}
+
+.zone {
+  fill: var(--panel-raised);
+  stroke: var(--hair);
+  stroke-width: 1;
+  cursor: pointer;
+  transition: fill var(--d-quick) var(--ease), stroke var(--d-quick) var(--ease);
+}
+.zone:hover { fill: var(--inset); stroke: var(--hair-strong); }
+.zone.selected {
+  fill: var(--accent);
+  stroke: var(--accent);
+  filter: drop-shadow(0 0 8px var(--accent));
+}
+.zone:focus-visible { outline: none; stroke: var(--focus); stroke-width: 2.5; }
+
+.bodymap__trace {
+  fill: none;
+  stroke: var(--hair-strong);
+  stroke-width: 1;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+
+/* A slow sweep down the figure. One element, one transform, no layout. */
+.bodymap__scan {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-start: 0;
+  block-size: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  opacity: 0.45;
+  pointer-events: none;
+  animation: sweep 5s linear infinite;
+}
+@keyframes sweep {
+  from { transform: translate3d(0, 0, 0); opacity: 0; }
+  10%  { opacity: 0.45; }
+  90%  { opacity: 0.45; }
+  to   { transform: translate3d(0, min(58dvh, 30rem), 0); opacity: 0; }
+}
+
+/* The readout under the figure. Empty until something is targeted. */
+.readout {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-block-size: 1.75rem;
+  font-family: var(--font-mono);
+  font-size: var(--t-small);
+  letter-spacing: var(--label-track);
+  text-transform: var(--label-transform);
+  color: var(--accent);
+}
+.readout[data-empty="1"] { color: var(--ink-dim); }
+
+/* ---- Pain tiles ---- */
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+  gap: var(--s-2);
+}
+.tile {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  min-block-size: 3.25rem;
+  padding: var(--s-2) var(--s-3);
+  border: var(--hairline) solid var(--hair-edge);
+  border-radius: var(--r-md);
+  background: var(--panel);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+  transition: border-color var(--d-quick) var(--ease), background var(--d-quick) var(--ease);
+}
+.tile__glyph {
+  font-size: var(--t-lead);
+  line-height: 1;
+  color: var(--ink-dim);
+  transition: color var(--d-quick) var(--ease);
+}
+.tile__label { font-size: var(--t-small); font-weight: var(--w-medium); }
+.tile:hover { border-color: var(--hair-strong); }
+/* Selected reads three ways at once: border colour, glyph colour, and a
+   corner notch. It survives with colour removed. */
+.tile.selected { border-color: var(--accent); background: var(--accent-wash); }
+.tile.selected .tile__glyph { color: var(--accent); }
+.tile.selected::after {
+  content: "";
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-end: 0;
+  border-block-start: 8px solid var(--accent);
+  border-inline-start: 8px solid transparent;
+}
+
+/* ---- Chips ---- */
+.chips { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2); }
+.chip {
+  padding: var(--s-1) var(--s-3);
+  border: var(--hairline) solid var(--accent);
+  border-radius: var(--r-sm);
+  background: var(--accent-wash);
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: var(--t-micro);
+  letter-spacing: var(--label-track);
+  text-transform: var(--label-transform);
+}
+
+/* ---- Context choices ---- */
+.choices { display: grid; gap: var(--s-2); }
+.choices--row { grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr)); }
+.choice {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  min-block-size: var(--tap);
+  padding: var(--s-3) var(--s-4);
+  border: var(--hairline) solid var(--hair-edge);
+  border-radius: var(--r-md);
+  background: var(--panel);
+  color: var(--text);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  transition: border-color var(--d-quick) var(--ease), background var(--d-quick) var(--ease);
+}
+.choice:hover { border-color: var(--hair-strong); }
+.choice--wide { min-block-size: 3.25rem; font-size: var(--t-lead); }
+.choice__mark { inline-size: 1rem; text-align: center; color: var(--ink-dim); }
+.choice.selected { border-color: var(--accent); background: var(--accent-wash); }
+.choice.selected .choice__mark { color: var(--accent); }
+
+/* ---- Cards ---- */
+.cards { display: grid; gap: var(--s-3); }
+.card {
+  position: relative;
+  background: var(--panel);
+  border: var(--hairline) solid var(--hair-edge);
+  border-inline-start: var(--hairline) solid var(--hair-edge);
+  border-radius: var(--r-md);
+  padding: var(--s-4);
+}
+.card[data-severity="soon"] {
+  border-inline-start-width: var(--rule-w-soon);
+  border-inline-start-color: var(--sev-soon);
+  background: var(--sev-soon-wash);
+}
+.card[data-severity="now"] {
+  border-inline-start-width: var(--rule-w-now);
+  border-inline-start-color: var(--sev-now);
+  background: var(--sev-now-wash);
+}
+.card__head {
+  font-size: var(--t-h3);
+  font-weight: var(--w-strong);
+  margin: 0 0 var(--s-3);
+  letter-spacing: var(--tr-tight);
+}
+.card__list { margin: 0 0 var(--s-4); padding-inline-start: var(--s-4); }
+.card__list li { margin-block-end: var(--s-2); font-size: var(--t-small); }
+/* A named cause reads as a heading for its own line, not as the first clause
+   of a sentence. */
+.card__term {
+  display: block;
+  font-weight: var(--w-strong);
+  color: var(--ink);
+}
+.card__term + span { color: var(--ink-mid); }
+.card__action { inline-size: 100%; }
+/* A red flag is the one card that must not arrive like the others. It settles
+   from slightly further out and slightly under size, and the severity rule
+   draws down its edge, so the eye is taken to the mark that means urgency. */
+.card--flag {
+  animation:
+    flag-in var(--d-settle) var(--ease-out) both,
+    rule-light var(--d-settle) var(--ease-out) both;
+  /* Scrolled into view on arrival, so it needs headroom or it lands jammed
+     against the top edge with the heading above it clipped. */
+  scroll-margin-block-start: var(--s-6);
+}
+@keyframes flag-in {
+  from { opacity: 0; transform: translate3d(0, var(--s-3), 0) scale(0.985); }
+}
+/* The severity rule lights up rather than being drawn by an overlay. An
+   absolutely positioned bar sitting on the border escapes the card and pushes
+   the panel sideways. */
+@keyframes rule-light { from { border-inline-start-color: transparent; } }
+
+/* The only filled red in the product. Everything around it is outline, so a
+   solid block still stops a person even on a dark instrument screen. */
+.btn--urgent {
+  inline-size: 100%;
+  background: var(--sev-now);
+  color: var(--sev-now-ink);
+  border-color: var(--sev-now);
+  font-weight: var(--w-heavy);
+}
+.btn--urgent:hover { background: var(--sev-now); filter: brightness(1.12); }
+
+.reasons { margin: 0; padding-inline-start: var(--s-4); }
+.reasons li {
+  margin-block-end: var(--s-3);
+  max-inline-size: var(--measure);
+  font-size: var(--t-small);
+}
+
+/* ---- Secondary actions. Still 44px tall. ---- */
+.linkish {
+  align-self: flex-start;
+  min-block-size: var(--tap);
+  padding-inline: var(--s-2);
+  border: 0;
+  background: none;
+  color: var(--ink-mid);
+  font: inherit;
+  font-family: var(--font-mono);
+  font-size: var(--t-micro);
+  letter-spacing: var(--label-track);
+  text-transform: var(--label-transform);
+  text-decoration: underline;
+  text-underline-offset: var(--s-1);
+  cursor: pointer;
+}
+.linkish:hover { color: var(--accent); }
+.linkish--quiet { color: var(--ink-dim); }
+
+/* ---- Bottom sheet ---- */
+.sheet-host { position: fixed; inset: 0; z-index: var(--z-modal); }
+.scrim {
+  position: absolute;
+  inset: 0;
+  /* Black in both themes: a tinted scrim shifts the contrast of the sheet
+     above it away from the measured values. */
+  background: rgb(0 0 0 / 0.62);
+  animation: fade var(--d-quick) var(--ease) both;
+}
+@keyframes fade { from { opacity: 0; } }
+.sheet {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: 0;
+  display: grid;
+  gap: var(--s-4);
+  padding: var(--s-5) var(--s-4) calc(var(--s-6) + env(safe-area-inset-bottom));
+  background: var(--panel-solid);
+  border-block-start: var(--hairline) solid var(--accent);
+  border-start-start-radius: var(--r-lg);
+  border-start-end-radius: var(--r-lg);
+  max-block-size: 80dvh;
+  overflow-y: auto;
+  transform: translate3d(0, 100%, 0);
+  transition: transform var(--d-settle) var(--ease-out);
+}
+.sheet--in { transform: translate3d(0, 0, 0); }
+.sheet__head { font-size: var(--t-h3); font-weight: var(--w-strong); margin: 0; }
+.sheet__note { color: var(--ink-mid); font-size: var(--t-small); margin: 0; }
+.sheet__go { inline-size: 100%; }
+
+.field {
+  min-block-size: var(--tap);
+  padding: var(--s-3) var(--s-4);
+  border: var(--hairline) solid var(--hair-edge);
+  border-radius: var(--r-md);
+  background: var(--inset);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--t-body);
+}
+.field::placeholder { color: var(--ink-dim); }
+
+/* ---- Tap acknowledgement ---- */
+.pulse { animation: pulse var(--d-settle) var(--ease-out); }
+@keyframes pulse {
+  from { box-shadow: 0 0 0 0 var(--accent); }
+  /* Spread only, no token: this is the ring's travel, not a spacing step. */
+  to   { box-shadow: 0 0 0 10px transparent; }
+}
+
+/* ---- Reduced motion. The Settings toggle stamps data-motion on the root
+   and must beat the media query in both directions. ---- */
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-motion="full"]) .symptom-game *,
+  :root:not([data-motion="full"]) .symptom-game *::before,
+  :root:not([data-motion="full"]) .symptom-game *::after {
+    animation: none !important;
+    transition-duration: 1ms !important;
+  }
+}
+:root[data-motion="reduced"] .symptom-game *,
+:root[data-motion="reduced"] .symptom-game *::before,
+:root[data-motion="reduced"] .symptom-game *::after {
+  animation: none !important;
+  transition-duration: 1ms !important;
+}
+
+/* ---- Desktop keeps the mobile shape, just with more air. ---- */
+@media (min-width: 48rem) {
+  .stage { padding-inline: var(--s-6); }
+  .sheet {
+    inset-inline: 50%;
+    inline-size: min(30rem, 92vw);
+    transform: translate3d(-50%, 100%, 0);
+    inset-block-end: var(--s-5);
+    border-radius: var(--r-lg);
+    border: var(--hairline) solid var(--accent);
+  }
+  .sheet--in { transform: translate3d(-50%, 0, 0); }
+}
+
+/* ================= Pain dial =================
+ * Types on a ring instead of stacked in a list. The centre holds the region
+ * already chosen, so the question and its subject stay together.
+ */
+.dial { display: grid; place-items: center; margin-block: var(--s-2); }
+.dial__svg {
+  inline-size: min(100%, 22rem);
+  block-size: auto;
+  overflow: visible;
+}
+.dial__bezel {
+  fill: none;
+  stroke: var(--hair);
+  stroke-width: 0.5;
+}
+.dial__seg { cursor: pointer; }
+.dial__wedge {
+  fill: var(--panel-raised);
+  stroke: var(--hair);
+  stroke-width: 0.75;
+  transition: fill var(--d-quick) var(--ease), stroke var(--d-quick) var(--ease);
+}
+.dial__seg:hover .dial__wedge { fill: var(--inset); stroke: var(--hair-strong); }
+.dial__seg.selected .dial__wedge {
+  fill: var(--accent-wash);
+  stroke: var(--accent);
+  stroke-width: 1.25;
+}
+.dial__seg:focus-visible { outline: none; }
+.dial__seg:focus-visible .dial__wedge { stroke: var(--focus); stroke-width: 2; }
+
+.dial__glyph {
+  font-size: 11px;
+  fill: var(--ink-dim);
+  transition: fill var(--d-quick) var(--ease);
+  pointer-events: none;
+}
+.dial__label {
+  font-family: var(--font-mono);
+  font-size: 7px;
+  letter-spacing: 0.06em;
+  text-transform: var(--label-transform);
+  fill: var(--ink-mid);
+  pointer-events: none;
+}
+.dial__seg.selected .dial__glyph { fill: var(--accent); }
+.dial__seg.selected .dial__label { fill: var(--accent); }
+
+.dial__hub {
+  fill: var(--bg-deep);
+  stroke: var(--hair-strong);
+  stroke-width: 0.75;
+  pointer-events: none;
+}
+.dial__hubtext {
+  font-size: 10px;
+  font-weight: var(--w-strong);
+  fill: var(--ink);
+  pointer-events: none;
+}
+.dial__count {
+  font-family: var(--font-mono);
+  font-size: 7px;
+  letter-spacing: 0.1em;
+  text-transform: var(--label-transform);
+  fill: var(--accent);
+  pointer-events: none;
+}
+
+/* ================= Intensity gauge =================
+ * The arc is the control. A wide transparent band under it catches the
+ * pointer, so a drag near the arc works rather than only exactly on it.
+ */
+.gauge { display: grid; justify-items: center; gap: var(--s-2); }
+.gauge__svg {
+  inline-size: min(100%, 17rem);
+  block-size: auto;
+  cursor: pointer;
+  touch-action: none;
+}
+.gauge__band {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 44;          /* a thumb's worth of grab room */
+  stroke-linecap: round;
+}
+.gauge__track { fill: none; stroke: var(--hair-strong); stroke-width: 6; pointer-events: none; }
+.gauge__fill {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 6;
+  filter: drop-shadow(0 0 5px var(--accent));
+  pointer-events: none;
+}
+.gauge__tick { stroke: var(--hair-strong); stroke-width: 1; pointer-events: none; }
+.gauge__knob {
+  fill: var(--accent);
+  stroke: var(--bg-deep);
+  stroke-width: 2;
+  filter: drop-shadow(0 0 6px var(--accent));
+  pointer-events: none;
+  transition: r var(--d-instant) var(--ease);
+}
+.gauge__svg:focus-visible { outline: none; }
+.gauge__svg:focus-visible .gauge__knob { stroke: var(--focus); stroke-width: 3; r: 9; }
+.gauge__svg:active .gauge__knob { r: 9; }
+
+.gauge__readout { display: flex; align-items: baseline; gap: var(--s-2); }
+.gauge__num {
+  font-family: var(--font-mono);
+  font-size: var(--t-h2);
+  font-weight: var(--w-strong);
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+.gauge__word {
+  font-family: var(--font-mono);
+  font-size: var(--t-micro);
+  letter-spacing: var(--label-track);
+  text-transform: var(--label-transform);
+  color: var(--ink-mid);
+}
+
+/* Inside the app shell the status strip already exists, so the console
+   drops its own rather than stacking two identical bars. */
+.screen .symptom-game > .hud { display: none; }
+
+/* The console has to be exactly as tall as the space it was given, not
+   taller. min-block-size only sets a floor, so on a short screen the
+   console grew past its host and the overflow was clipped with no way to
+   reach it. A definite height lets the 1fr row resolve and the stage scroll. */
+.screen .symptom-game {
+  block-size: 100%;
+  min-block-size: 0;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+.screen--bleed .stage-host { min-block-size: 0; }
+.screen--bleed .stage { padding-block-end: var(--s-6); }
+
+/* ---- Point capture ----
+ * A reticle marks the exact spot a person tapped, which is finer than the
+ * region it fell inside. Numbered, because more than one place can hurt.
+ */
+/* Reticles are svg children, so they share the figure's transform and cannot
+   drift out of register with it the way an overlaid div did. */
+.mark circle {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.2;
+  vector-effect: non-scaling-stroke;
+  filter: drop-shadow(0 0 3px var(--accent));
+}
+.mark line {
+  stroke: var(--accent);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+.mark {
+  pointer-events: none;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: mark-in var(--d-settle) var(--ease-out) both;
+}
+@keyframes mark-in {
+  from { opacity: 0; transform: scale(2.2); }
+  to   { opacity: 1; transform: scale(1); }
+}}
+
+/* Inside the shell the figure shares the screen with a status strip and a
+   tab bar, so it takes a smaller slice than it does standalone. */
+/* An SVG with a viewBox already knows how to fit a box: preserveAspectRatio
+   defaults to meet, so it scales down and centres itself. The trick is
+   giving it a box with a definite height. A stretched grid or flex item is
+   not definite for percentage resolution, so block-size: 100% silently fell
+   back to the drawing's own aspect and ran off the screen. Absolute
+   positioning against the relatively positioned .bodymap is definite, and
+   it holds at every viewport ratio without a single viewport unit. */
+.screen--bleed .bodymap {
+  min-block-size: 6rem;
+  overflow: hidden;
+}
+.screen--bleed .bodymap__svg {
+  position: absolute;
+  inset: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  max-inline-size: none;
+  max-block-size: none;
+}
+.screen--bleed .bodymap__scan { animation-name: sweep-fill; }
+@keyframes sweep-fill {
+  from { transform: translate3d(0, 0, 0); opacity: 0; }
+  10%  { opacity: 0.45; }
+  90%  { opacity: 0.45; }
+  to   { transform: translate3d(0, 100%, 0); opacity: 0; }
+}
+
+/* ---- Short and wide: a phone on its side, or a small 4:3 desktop ----
+ * Under about 34rem of height the figure and its controls stop fitting in a
+ * column. Every child gets an explicit row and column here, because auto
+ * placement puts the title under the figure the moment one item spans.
+ * Scoped to the body step, since the other steps are happy scrolling.
+ */
+@media (max-height: 34rem) and (min-width: 34rem) {
+  .screen--bleed .stage[data-stage="BODY_SELECT"] {
+    display: grid;
+    grid-template-columns: minmax(9rem, 1fr) minmax(13rem, 1.2fr);
+    grid-template-rows: auto auto auto 1fr auto;
+    column-gap: var(--s-5);
+    row-gap: var(--s-2);
+    inline-size: min(100%, 50rem);
+    padding-block: var(--s-3);
+    /* No align-content: start here. The 1fr row has to take the leftover
+       height, or the figure sizes itself and runs under the tab bar. */
+  }
+  .stage[data-stage="BODY_SELECT"] .stage__eyebrow { grid-column: 1 / -1; grid-row: 1; }
+  .stage[data-stage="BODY_SELECT"] .stage__title   { grid-column: 1 / -1; grid-row: 2; margin: 0; }
+  .stage[data-stage="BODY_SELECT"] .bodymap {
+    grid-column: 1;
+    grid-row: 3 / 6;
+    min-block-size: 0;
+    align-self: stretch;
+    justify-self: stretch;
+  }
+  .stage[data-stage="BODY_SELECT"] .views          { grid-column: 2; grid-row: 3; }
+  .stage[data-stage="BODY_SELECT"] .readout        { grid-column: 2; grid-row: 4; align-self: start; }
+  .stage[data-stage="BODY_SELECT"] .stage__footer  { grid-column: 2; grid-row: 5; margin-block-start: 0; }
+  .stage[data-stage="BODY_SELECT"] .linkish        { grid-column: 2; grid-row: 5; }
+
+  /* The dial is round, so on a short screen it sits beside its chips
+     rather than above them. */
+  .screen--bleed .stage[data-stage="PAIN_TYPES"] .dial__svg { inline-size: min(100%, 15rem); }
+}
+
+/* Very short screens trade the title size for figure room. */
+@media (max-height: 26rem) {
+  .screen--bleed .stage__title { font-size: var(--t-h3); }
+  .screen--bleed .stage { padding-block: var(--s-2); gap: var(--s-2); }
+  .screen--bleed .stage__eyebrow { display: none; }
+}
+
+/* No scrollbar anywhere inside the instrument. */
+.stage { scrollbar-width: none; }
+.stage::-webkit-scrollbar { display: none; }
+
+/* ---- Area zoom ----
+   Cropping the figure to one area is what gets limb zones past the 44px
+   floor on a phone, so the control that does it is a first class row. */
+.zooms {
+  display: flex;
+  gap: var(--s-2);
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-block-end: var(--s-1);
+  margin-block-end: var(--s-2);
+}
+.zooms::-webkit-scrollbar { display: none; }
+.zoombtn {
+  flex: 0 0 auto;
+  min-block-size: var(--tap);
+  padding-inline: var(--s-4);
+  border: var(--hairline) solid var(--hair-edge);
+  border-radius: var(--r-pill);
+  background: var(--panel);
+  color: var(--ink-mid);
+  font: inherit;
+  font-family: var(--font-mono);
+  font-size: var(--t-micro);
+  letter-spacing: var(--label-track);
+  text-transform: var(--label-transform);
+  cursor: pointer;
+  transition: color var(--d-quick) var(--ease), border-color var(--d-quick) var(--ease);
+}
+.zoombtn:hover { color: var(--accent); border-color: var(--accent); }
+.zoombtn[aria-pressed="true"] {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-wash);
+}
+
+/* Clipped by the crop, so not reachable by finger or by keyboard either. */
+.zone--offcrop { pointer-events: none; }
