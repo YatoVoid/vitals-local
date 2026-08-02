@@ -836,3 +836,9 @@
   font-weight: var(--w-strong);
   color: var(--ink);
 }
+
+/* Same reasoning as the shell: the console drops its grid on the soft theme. */
+:root[data-theme="kawaii"] .symptom-game::before { display: none; }
+:root[data-theme="kawaii"] .symptom-game {
+  background: var(--bg);
+}

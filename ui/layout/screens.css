@@ -679,3 +679,20 @@
 @media (prefers-reduced-motion: reduce) {
   .labscale__marker { transition: none; }
 }
+
+/* ---- Soft theme adjustments ----
+   A hairline tuned to glow against near black disappears on cream, so the
+   parts that are drawn rather than written get a firmer line here. */
+:root[data-theme="kawaii"] .ring__track { stroke: rgb(70 60 52 / 0.16); }
+:root[data-theme="kawaii"] .ring__arc { filter: none; }
+:root[data-theme="kawaii"] .glass { border-color: var(--hair-edge); }
+:root[data-theme="kawaii"] .labscale__track {
+  background: linear-gradient(
+    to right,
+    var(--sev-soon-wash) 0%,
+    rgb(70 60 52 / 0.14) 12%,
+    rgb(70 60 52 / 0.14) 88%,
+    var(--sev-soon-wash) 100%);
+}
+:root[data-theme="kawaii"] .labscale__marker { box-shadow: 0 0 0 2px var(--panel); }
+:root[data-theme="kawaii"] .bmibar__track { background: rgb(70 60 52 / 0.12); }

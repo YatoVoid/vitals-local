@@ -502,3 +502,21 @@ body {
   border-color: var(--sev-soon);
   color: var(--sev-soon);
 }
+
+/* The measuring grid and the ambient wash are instrument language. They read
+   as grubby on cream, so the soft theme drops them and keeps the plain field. */
+:root[data-theme="kawaii"] .app::before { display: none; }
+:root[data-theme="kawaii"] .app {
+  background: var(--bg);
+}
+:root[data-theme="kawaii"] .statusbar,
+:root[data-theme="kawaii"] .tabs {
+  background: var(--bg-deep);
+}
+/* Cards lift off the cream instead of being outlined against the dark. */
+:root[data-theme="kawaii"] .panel,
+:root[data-theme="kawaii"] .card,
+:root[data-theme="kawaii"] .tile2,
+:root[data-theme="kawaii"] .row {
+  box-shadow: var(--shadow-card);
+}

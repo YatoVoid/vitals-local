@@ -79,8 +79,7 @@
 }
 
 /* ================= med, default ================= */
-:root,
-:root[data-theme="med"] {
+:root[data-theme="neon"] {
   color-scheme: dark;
 
   --bg: #06090C;
@@ -129,6 +128,68 @@
   --label-transform: uppercase;
   --label-track: var(--tr-hud);
   --corner-len: 10px;
+}
+
+/* ================= kawaii, the default =================
+ *
+ * Warm cream, soft rose, generous corners. The register is a Japanese cute
+ * stationery aisle rather than an instrument panel, so the glow, the
+ * scanlines, the viewfinder ticks and the tracked uppercase all switch off
+ * and the radii open right up.
+ *
+ * Two things do not soften. Red still means urgency and appears nowhere else,
+ * and every ink here clears the contrast floor on cream, which is why the
+ * rose is a deep dusty sakura rather than the pale one it fills with.
+ */
+:root,
+:root[data-theme="kawaii"] {
+  color-scheme: light;
+
+  --bg: #FBF6EE;
+  --bg-deep: #F5EEE2;
+  --panel: #FFFFFF;
+  --panel-solid: #FFFFFF;
+  --panel-raised: #FBF5EC;
+  --inset: #F5EEE2;
+
+  --ink: #463C34;       /* 9.98:1 on the cream */
+  --ink-mid: #61584F;   /* 6.1:1 */
+  --ink-dim: #736860;   /* 5.0:1 on cream, 4.7:1 on the deeper bands */
+
+  --accent: #A8505A;    /* 4.9:1, so it can carry text as well as fills */
+  --accent-deep: #8F4049;
+  --accent-wash: rgb(216 139 139 / 0.16);   /* the pale sakura, for fills only */
+
+  --hair: rgb(70 60 52 / 0.12);   /* a divider inside a card, decorative */
+  --hair-edge: #8C8378;           /* 3.2:1, the edge of a control */
+  --hair-strong: #6F665C;         /* 4.6:1, a hovered or active edge */
+
+  --sev-soon: #9C5B22;
+  --sev-soon-wash: rgb(240 176 96 / 0.18);
+  --sev-now: #B3261E;
+  --sev-now-wash: rgb(196 60 48 / 0.10);
+  --sev-now-ink: #FFFFFF;
+
+  --focus: var(--accent);
+  --focus-ring: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent);
+
+  /* The corners are the loudest thing about this theme. */
+  --r-sm: 10px; --r-md: 16px; --r-lg: 22px; --r-pill: 999px;
+  --hairline: 1px;
+
+  --action-bg: var(--accent);
+  --action-ink: #FFFFFF;
+  --action-bg-hover: #93444E;
+  --action-quiet-bg: transparent;
+  --action-quiet-ink: var(--ink);
+  --shadow-card: 0 1px 2px rgb(70 60 52 / 0.05), 0 6px 16px rgb(70 60 52 / 0.05);
+
+  --overlay: none;
+  --bloom: none;
+  --bloom-soft: none;
+  --label-transform: none;
+  --label-track: var(--tr-normal);
+  --corner-len: 0px;
 }
 
 /* ================= crt, retro green readout ================= */

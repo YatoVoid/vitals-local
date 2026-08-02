@@ -5,13 +5,22 @@ interface earns trust by being exact, not by being soothing.
 
 ## Themes
 
-Two themes share one skeleton. Layout, spacing and component structure never
+Three themes share one skeleton. Layout, spacing and component structure never
 change between them; only colour, type, overlay and radius do.
 
 | Theme | `data-theme` | Character |
 |---|---|---|
-| Medical instrument | `med` (default) | Near-black cool ground, ice-cyan hairlines, tight radii, wide-tracked mono labels. Precision and negative space carry it, not glow. |
+| Soft | `kawaii` (default) | Warm cream ground, white cards, dusty sakura accent, generous radii, sentence case. A Japanese cute register rather than an instrument panel: no glow, no scanlines, no viewfinder ticks. |
+| Blue neon | `neon` | Near-black cool ground, ice-cyan hairlines, tight radii, wide-tracked mono labels. Precision and negative space carry it, not glow. |
 | Retro CRT | `crt` | Phosphor green readout, scanlines, bloom, zero radius, mono throughout. |
+
+`neon` was called `med` before the themes were named. Anyone holding the old
+value is moved across on read rather than reset, so a choice already made is
+not taken away.
+
+Adding a theme means defining the whole token set. A test compares each block
+against the others and fails on anything missing, because a half defined theme
+renders as a half styled screen rather than as an error.
 
 **Red is reserved for urgency and appears nowhere else.** This is why red was
 rejected as an accent: if red is ambient chrome, a red-flag card can no longer
@@ -23,7 +32,9 @@ never redefine colour.
 ## Rules
 
 1. **Colour means severity.** The page is achromatic apart from the theme
-   accent on the active element. Amber means soon, red means now.
+   accent on the active element. Amber means soon, red means now. This holds
+   on the light theme too, which is why its accent is a deep dusty rose rather
+   than the pale pink it fills with: an accent has to carry text.
 2. **No hardcoded values.** Every colour, radius, duration, space and size
    comes from a `var(--token)`. A genuine one-off carries a comment saying why
    no token fits.

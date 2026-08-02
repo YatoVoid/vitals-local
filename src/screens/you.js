@@ -8,6 +8,8 @@ import { el, eyebrow, fieldLabel, panel, button, row, rows, segmented, toggle, r
 import { settings, profile, symptoms, exportAll, importAll, usage, wipe, applySettings } from '../app/store.js';
 import { display as unitDisplay, store as unitStore, units as unitWords } from '../app/units.js';
 import { language as i18nLanguage } from '../i18n/languages.js';
+
+const THEME_NAMES = { kawaii: 'Soft', neon: 'Blue neon', crt: 'Retro CRT' };
 import { stats as i18nStats } from '../i18n/cache.js';
 
 const COUNTRIES = [
@@ -27,7 +29,7 @@ export function renderYou(screen, { go }) {
   screen.appendChild(rows(
     row('Profile', { sub: p.age ? `${p.age}, ${p.sex ?? 'unstated'}` : 'Not filled in yet', onClick: () => go('#/you/profile') }),
     row('Symptom history', { end: String(symptoms.all().length), sub: 'Every scan you saved', onClick: () => go('#/you/history') }),
-    row('Settings', { sub: `${s.theme === 'med' ? 'Medical' : 'Retro CRT'}, ${s.language}`, onClick: () => go('#/you/settings') }),
+    row('Settings', { sub: `${THEME_NAMES[s.theme] ?? s.theme}, ${s.language}`, onClick: () => go('#/you/settings') }),
   ));
 
   const box = panel(
@@ -52,7 +54,9 @@ export function renderSettings(screen, { go, live }) {
 
     screen.appendChild(el('h2', null, 'Theme'));
     screen.appendChild(segmented(
-      [{ id: 'med', label: 'Medical' }, { id: 'crt', label: 'Retro CRT' }],
+      [{ id: 'kawaii', label: 'Soft' },
+       { id: 'neon', label: 'Blue neon' },
+       { id: 'crt', label: 'Retro CRT' }],
       s.theme,
       id => { settings.set({ theme: id }); live.textContent = 'Theme changed'; draw(); },
       'Theme',

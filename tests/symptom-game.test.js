@@ -319,6 +319,62 @@ function walk(region, seed, script, limit = 12) {
   assert.ok(PAIN_TYPES.filter(p => !p.extra).length <= 10, 'first pain view stays at ten or fewer');
 }
 
+/* ---- Themes ----
+   Renaming a theme must not quietly reset anyone who chose it, and every
+   theme has to define the whole token set or a screen ends up half styled. ---- */
+{
+  const bag = new Map();
+  globalThis.localStorage = {
+    getItem: k => (bag.has(k) ? bag.get(k) : null),
+    setItem: (k, v) => bag.set(k, String(v)),
+    removeItem: k => bag.delete(k),
+    key: i => [...bag.keys()][i] ?? null,
+    get length() { return bag.size; },
+  };
+  globalThis.document = { documentElement: { dataset: {} } };
+
+  const store = await import('../src/app/store.js');
+
+  assert.equal(store.settings.get().theme, 'kawaii', 'a fresh install opens soft');
+
+  bag.set('vitals.settings', JSON.stringify({ theme: 'med' }));
+  assert.equal(store.settings.get().theme, 'neon',
+    'someone who chose the instrument theme keeps it under its new name');
+
+  bag.set('vitals.settings', JSON.stringify({ theme: 'crt' }));
+  assert.equal(store.settings.get().theme, 'crt', 'other themes are left alone');
+
+  // Every theme defines every token, checked against the stylesheet itself.
+  const { readFileSync } = await import('node:fs');
+  const { join, dirname } = await import('node:path');
+  const { fileURLToPath } = await import('node:url');
+  const css = readFileSync(
+    join(dirname(fileURLToPath(import.meta.url)), '..', 'ui', 'themes', 'tokens.css'), 'utf8');
+
+  const blockFor = name => {
+    const at = css.indexOf(`[data-theme="${name}"]`);
+    assert.ok(at > -1, `${name} has a token block`);
+    const open = css.indexOf('{', at);
+    return css.slice(open, css.indexOf('\n}', open));
+  };
+  const tokensIn = block => new Set([...block.matchAll(/(--[a-z0-9-]+)\s*:/g)].map(m => m[1]));
+
+  const neon = tokensIn(blockFor('neon'));
+  assert.ok(neon.size > 30, 'the reference theme defines a full set');
+  for (const name of ['kawaii', 'crt']) {
+    const missing = [...neon].filter(t => !tokensIn(blockFor(name)).has(t));
+    assert.deepEqual(missing, [], `${name} is missing tokens the other themes define`);
+  }
+
+  // The soft theme is the light one and must say so, or form controls
+  // render dark on cream.
+  assert.match(blockFor('kawaii'), /color-scheme:\s*light/);
+  assert.match(blockFor('neon'), /color-scheme:\s*dark/);
+
+  delete globalThis.localStorage;
+  delete globalThis.document;
+}
+
 /* ---- Lab bands ----
    The whole point of these is that a value can sit inside the printed range
    and still mean something, so the tests pin the thresholds that carry that

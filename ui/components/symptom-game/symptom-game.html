@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" data-theme="med">
+<html lang="en" data-theme="kawaii">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -64,7 +64,7 @@
     });
   };
 
-  wire('theme', 'CRT', 'Medical', on => root.dataset.theme = on ? 'crt' : 'med');
+  wire('theme', 'CRT', 'Soft', on => root.dataset.theme = on ? 'crt' : 'kawaii');
   wire('dir', 'RTL', 'LTR', on => root.dir = on ? 'rtl' : 'ltr');
   wire('motion', 'Reduce motion', 'Full motion', on => root.dataset.motion = on ? 'reduced' : 'full');
 </script>

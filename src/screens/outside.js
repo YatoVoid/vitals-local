@@ -5,14 +5,18 @@
  */
 
 import { el, eyebrow, fieldLabel, panel, button, row, rows, segmented } from '../app/ui.js';
-import { savedPlace, savePlace, fetchConditions, sunAdvice, airAdvice,
+import { savedPlace, savePlace, fetchConditions, lastConditions, sunAdvice, airAdvice,
          uvBand, SKIN_TYPES, locate } from '../app/weather.js';
 import { findPlaces } from '../data/places.js';
 import { profile } from '../app/store.js';
 
 export function renderOutside(screen, { go, live }) {
   let manual = { uv: null, aqi: null };
-  let status = null;
+  /* Opens on whatever was last stored, so arriving from the home tile shows
+     the same reading the tile did rather than an empty screen asking for one.
+     Nothing is fetched until it is asked for. */
+  const held = lastConditions();
+  let status = held ? { ok: true, data: held.data, at: held.at, stale: held.stale, source: 'cache' } : null;
 
   const draw = () => {
     screen.replaceChildren();
@@ -114,9 +118,14 @@ export function renderOutside(screen, { go, live }) {
       const err = panel(eyebrow('Could not fetch'), el('p', null, status.error));
       err.dataset.severity = 'soon';
       screen.appendChild(err);
+    } else if (status?.source === 'cache' && !status.stale) {
+      const note = el('p', 'hint',
+        `Last read at ${new Date(status.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}. `
+        + 'Fetch again for the current figure.');
+      screen.appendChild(note);
     } else if (status?.stale) {
       screen.appendChild(el('p', 'hint',
-        `Showing the last reading, from ${new Date(status.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}. Could not refresh.`));
+        `Showing the last reading, from ${new Date(status.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}. Fetch again for the current figure.`));
     }
 
     if (uv != null) {

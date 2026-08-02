@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" data-theme="med">
+<html lang="en" data-theme="kawaii">
 <head>
 <meta charset="utf-8">
 <title>Accessibility audit</title>
@@ -26,7 +26,7 @@
 
 <h1>Accessibility audit</h1>
 <p class="note">
-  Walks every route in both themes and reports text contrast below the WCAG AA
+  Walks every route in every theme and reports text contrast below the WCAG AA
   floor (4.5:1, or 3:1 for large text), controls smaller than 44px on their
   short axis, elements wider than the viewport, and controls with no
   accessible name. The run starts by planting a known-bad node and confirming
@@ -62,6 +62,8 @@ const tbody = document.querySelector('#out tbody');
 const statusEl = document.getElementById('status');
 const summaryEl = document.getElementById('summary');
 const wait = ms => new Promise(r => setTimeout(r, ms));
+
+const THEMES = ['kawaii', 'neon', 'crt'];
 
 const ROUTES = ['#/home','#/body','#/track','#/track/pain','#/track/diet','#/track/hydration',
   '#/track/meds','#/track/labs','#/track/outside','#/learn','#/learn/cancer','#/learn/detox',
@@ -231,7 +233,7 @@ async function runAudit() {
   await wait(120);
 
   let total = 0;
-  for (const theme of ['med', 'crt']) {
+  for (const theme of THEMES) {
     win.document.documentElement.dataset.theme = theme;
     for (const route of ROUTES) {
       statusEl.textContent = `${theme} ${route}`;
@@ -248,7 +250,7 @@ async function runAudit() {
   statusEl.textContent = 'done';
   summaryEl.innerHTML = selfTest
     ? (total === 0
-        ? `<span class="ok">Self test passed. Nothing failed across both themes at ${w} x ${h}, ${ROUTES.length} routes each.</span>`
+        ? `<span class="ok">Self test passed. Nothing failed at ${w} x ${h}, ${THEMES.length} themes, ${ROUTES.length} routes each.</span>`
         : `<span class="bad">${total} findings at ${w} x ${h}.</span> Self test passed, so these are real.`)
     : '<span class="warn">The self test did not catch a known-bad node. Treat this run as meaningless and fix the checker.</span>';
 }

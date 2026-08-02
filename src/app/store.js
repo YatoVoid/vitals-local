@@ -83,16 +83,23 @@ export function usage() {
   return { kb: Math.round(total / 1024), byKey };
 }
 
+/* The instrument theme was called med before it was named. Anyone holding the
+   old value is moved across on read rather than being reset to the default,
+   which would take their choice away. */
+const THEME_ALIASES = { med: 'neon' };
+
 export const settings = {
   get() {
-    return read('settings', {
-      theme: 'med',
+    const s = read('settings', {
+      theme: 'kawaii',
       motion: 'system',
       language: 'en',
       country: 'US',
       units: 'metric',
       textSize: 'normal',
     });
+    if (THEME_ALIASES[s.theme]) s.theme = THEME_ALIASES[s.theme];
+    return s;
   },
   set(patch) {
     const next = { ...settings.get(), ...patch };
@@ -102,10 +109,17 @@ export const settings = {
   },
 };
 
+/* What the browser paints around the page: the address bar on Android, the
+   status area in a standalone window. It has to follow the theme or a light
+   app sits under a black bar. */
+const THEME_COLOR = { kawaii: '#F5EEE2', neon: '#030507', crt: '#010301' };
+
 /** Push settings onto the document so CSS can act on them. */
 export function applySettings(s = settings.get()) {
   const root = document.documentElement;
   root.dataset.theme = s.theme;
+  const meta = document.querySelector?.('meta[name="theme-color"]');
+  meta?.setAttribute('content', THEME_COLOR[s.theme] ?? THEME_COLOR.kawaii);
   if (s.motion === 'system') delete root.dataset.motion;
   else root.dataset.motion = s.motion;
   root.dataset.text = s.textSize;
