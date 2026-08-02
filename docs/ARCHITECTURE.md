@@ -200,9 +200,9 @@ contents, so a percentage of the element box is not a percentage of the
 figure.
 
 `tests/audit.html` measures tap targets, contrast, accessible names and
-overflow across every route, both themes, and four viewport sizes. It plants a
-known-bad node first and reports the run as meaningless if the checker fails to
-catch it.
+overflow across every route, all three themes, and four viewport sizes. It
+plants a known-bad node first and reports the run as meaningless if the checker
+fails to catch it.
 
 ## Offline
 
@@ -218,6 +218,13 @@ does not fit both cases:
 
 The trade is that an asset can be one load behind. The page referencing it is
 not, and `VERSION` clears the cache when the file list changes.
+
+The background refresh asks the server with `cache: 'no-cache'` rather than
+fetching plainly. A plain fetch is answered by the HTTP cache, and Pages serves
+these files with a ten minute `max-age`, so the refresh was handed back the
+copy already held and wrote it straight back. An installed copy never picked up
+a change at all, at any point, and only a `VERSION` bump moved anyone. It looks
+like the cache working normally, which is what made it hard to see.
 
 Cross-origin requests are never intercepted, so the weather and translation
 endpoints are never replayed from a cache.

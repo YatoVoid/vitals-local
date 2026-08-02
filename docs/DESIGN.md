@@ -48,7 +48,7 @@ never redefine colour.
    never on text mid-read, fully off under reduced motion.
 7. **Accessibility floor.** Visible focus, labelled controls, keyboard
    traversal, announced state changes, 4.5:1 for body text and 3:1 for large
-   text and rules, measured in both themes.
+   text and rules, measured in all three themes.
 
 ## Typography
 
@@ -90,8 +90,13 @@ marks, sentence case headings.
 
 **Tone by theme.** Same meaning, different rhythm:
 
-- `med`: *Does the pain change when you move?* / *Saved. Three entries today.*
+- `kawaii` and `neon`: *Does the pain change when you move?* / *Saved. Three
+  entries today.*
 - `crt`: *MOVEMENT CHANGES PAIN? [Y] [N] [SOMETIMES]* / *ENTRY LOGGED, 3 TODAY*
+
+All three themes share the same strings. The CRT casing is `text-transform`
+driven by `--label-transform`, not a second set of wording, so a phrasing
+change lands everywhere and there is nothing to keep in step.
 
 ## Reference material
 

@@ -35,6 +35,14 @@ back pain red flags.
 **Tracking.** Food, water, medicines, lab results, and pain episodes over time,
 with the arithmetic behind every figure visible on tap.
 
+**Lab results in bands, not just in or out.** For several markers the number
+that changes what anyone does sits inside the printed range: plenty of
+laboratories report ferritin from 15, while iron deficiency is identified below
+30. So each marker carries the thresholds that are acted on, and the
+haemoglobin range follows the sex on the profile rather than using one figure
+for everyone. Thresholds are in `src/data/labs.js`, each with the body behind
+it named.
+
 **Library.** Around forty articles and a set of checked claims, searchable over
 full text. Sourced from guideline bodies, systematic reviews and
 pharmacopoeia. No blogs, no news write-ups, no industry-funded material, and
@@ -44,8 +52,8 @@ no product is named or recommended anywhere.
 paracetamol and acetaminophen resolve to the same molecule. It reports what is
 on the label and never produces a dose.
 
-**Outside.** UV index, burn estimate by skin type, and air quality. Works with
-typed values if you would rather not share a location.
+**Outside.** UV index with the SPF to use, burn estimate by skin type, and air
+quality. Works with typed values if you would rather not share a location.
 
 ## Languages
 
@@ -93,12 +101,13 @@ index.html               the application
 sw.js                    offline cache
 src/
   app/                   shell, routing, storage, shared builders
-  data/                  article library, ingredients, places
+  data/                  article library, ingredients, lab bands, emergency
+                         numbers, places
   i18n/                  language table, translation cache, DOM walker
   screens/               one module per screen
   triage/                clinical question banks and the inference engine
 ui/
-  themes/tokens.css      colour, type, spacing, motion. Two themes.
+  themes/tokens.css      colour, type, spacing, motion. Three themes.
   layout/                shell and screen-level CSS
   components/            symptom console
 tests/                   node test suite and browser harnesses
@@ -118,7 +127,7 @@ and import, and that every module parses.
 Browser harnesses live in `tests/`:
 
 - `audit.html` measures contrast, tap targets, accessible names and overflow
-  across every route, both themes, and four viewport sizes. It plants a
+  across every route, all three themes, and four viewport sizes. It plants a
   known-bad node first and refuses to report a clean run if the checker fails
   to catch it.
 - `i18n.html` audits translation coverage per language.
