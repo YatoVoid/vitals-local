@@ -283,7 +283,10 @@ export function renderProfile(screen, { live }) {
       const bmr = Math.round(10 * weightKg + 6.25 * heightCm - 5 * age + (male ? 5 : -161));
       const factor = { Low: 1.2, Some: 1.375, Regular: 1.55, Heavy: 1.725 }[activity] ?? 1.2;
       const target = Math.round(bmr * factor);
-      profile.set({ kcalGoal: target });
+      /* Only when it actually moved. Every field on this screen redraws the
+         whole thing on change, so an unconditional write here stored the same
+         number again on each edit of sleep, alcohol or anything else. */
+      if (target !== p.kcalGoal) profile.set({ kcalGoal: target });
 
       const box = panel(
         eyebrow('Your energy target, and how it was worked out'),

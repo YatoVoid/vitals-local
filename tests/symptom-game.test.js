@@ -614,6 +614,77 @@ function walk(region, seed, script, limit = 12) {
   assert.notEqual(nextQuestion(back, bank)?.id, q2.id, 'and does not re-offer it');
 }
 
+/* ---- Food and energy ----
+   The energy target, the weekly window and the shortcut list. The target is
+   the one that matters: a single figure for everyone sat about 600 kcal above
+   what an average woman at low activity needs. ---- */
+{
+  const bag = new Map();
+  globalThis.localStorage = {
+    getItem: k => (bag.has(k) ? bag.get(k) : null),
+    setItem: (k, v) => bag.set(k, String(v)),
+    removeItem: k => bag.delete(k),
+    key: i => [...bag.keys()][i],
+    get length() { return bag.size; },
+  };
+  globalThis.document = { documentElement: { dataset: {} } };
+
+  const store = await import('../src/app/store.js');
+
+  // Reference intakes, used only when the profile cannot produce a real one.
+  assert.equal(store.referenceEnergy({}), 2000, 'an unset profile takes the lower figure');
+  assert.equal(store.referenceEnergy({ sex: 'Female' }), 2000);
+  assert.equal(store.referenceEnergy({ sex: 'Male' }), 2500);
+  // A worked out target always wins over the reference figure.
+  assert.equal(store.referenceEnergy({ sex: 'Male', kcalGoal: 1840 }), 1840,
+    'a target from the profile is not overridden by the reference intake');
+
+  // The weekly window counts calendar days, and skips days with no entry.
+  const day = 24 * 60 * 60 * 1000;
+  const at = d => new Date(Date.now() - d * day).toISOString();
+  bag.set('vitals.food_log', JSON.stringify([
+    { id: 'a', at: at(0), name: 'Pilav', kcal: 400, proteinG: 10 },
+    { id: 'b', at: at(0), name: 'Cay', kcal: 5 },
+    { id: 'c', at: at(2), name: 'Pilav', kcal: 600 },
+    { id: 'd', at: at(30), name: 'Old one', kcal: 9999 },
+  ]));
+  const wk = store.weekEnergy();
+  assert.equal(wk.kcal, 1005, 'the entry from last month is outside the window');
+  assert.equal(wk.days, 2, 'two calendar days carry an entry');
+  assert.equal(wk.perDay, 503, 'the average divides by days logged, not by seven');
+  assert.equal(wk.proteinG, 10, 'entries with no protein count as none rather than breaking');
+
+  const s = store.summary();
+  assert.equal(s.kcal, 405, 'today only');
+  assert.equal(s.proteinG, 10);
+
+  // Shortcuts come from the log, so they are already in the right language.
+  globalThis.document.createElement = () => ({
+    setAttribute() {}, appendChild() {}, addEventListener() {}, style: {},
+    classList: { add() {} },
+  });
+  const { quickFoods } = await import('../src/screens/track.js');
+
+  const empty = quickFoods([]);
+  assert.ok(empty.length && empty.every(f => f.fromLog === false),
+    'an empty log falls back to the starter set');
+
+  const picked = quickFoods([
+    { name: 'Pilav', kcal: 400 }, { name: 'Pilav', kcal: 6000 }, { name: 'Pilav', kcal: 420 },
+    { name: 'Cay', kcal: 5 }, { name: 'Cay', kcal: 5 },
+    { name: 'Menemen', kcal: 300, proteinG: 14 },
+  ]);
+  assert.deepEqual(picked.map(f => f.name), ['Pilav', 'Cay', 'Menemen'],
+    'most often logged comes first');
+  assert.equal(picked[0].kcal, 420,
+    'the median holds against one mistyped entry, which a mean would not');
+  assert.equal(picked[2].proteinG, 14, 'protein carries through to the shortcut');
+  assert.ok(picked.every(f => f.fromLog), 'these came from the log and must not be translated');
+
+  delete globalThis.localStorage;
+  delete globalThis.document;
+}
+
 /* ---- Nothing stray is committed ----
    A shell redirect inside a quoted command writes a file named after whatever
    followed the bracket, and `git add -A` then commits it. They are empty, they
@@ -625,21 +696,25 @@ function walk(region, seed, script, limit = 12) {
   const { fileURLToPath } = await import('node:url');
   const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 
+  /* Untracked files count too. Checking only what is already tracked meant
+     the run passed, a blanket add swept the artefacts in, and the commit
+     carried them anyway. These are exactly the files an add would pick up. */
   let tracked = [];
   try {
-    tracked = execFileSync('git', ['ls-files'], { cwd: root, encoding: 'utf8' })
-      .split('\n').filter(Boolean);
+    tracked = execFileSync('git', ['ls-files', '--cached', '--others', '--exclude-standard'],
+      { cwd: root, encoding: 'utf8' }).split('\n').filter(Boolean);
   } catch { tracked = []; }   // not a checkout, nothing to check
 
+  /* Empty is the signal that holds. A name test alone kept letting these
+     through: "n.attrs.translate" carries dots and no punctuation, so it reads
+     as an ordinary filename and is not one. Nothing this app ships is empty,
+     and dotfiles that legitimately are, such as .nojekyll, are skipped. */
   const ALLOWED_WITHOUT_EXTENSION = new Set(['LICENSE']);
   const junk = tracked.filter(p => {
     const name = p.split('/').pop();
     if (name.startsWith('.') || ALLOWED_WITHOUT_EXTENSION.has(name)) return false;
-    const odd = !name.includes('.') || /[(){}[\]<>'"|,+]/.test(name);
-    if (!odd) return false;
-    let empty = false;
-    try { empty = statSync(join(root, p)).size === 0; } catch {}
-    return empty || /[(){}[\]<>'"|,+]/.test(name);
+    if (/[(){}[\]<>'"|,+]/.test(name)) return true;
+    try { return statSync(join(root, p)).size === 0; } catch { return false; }
   });
   assert.deepEqual(junk, [], 'these look like shell artefacts rather than files');
 }

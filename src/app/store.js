@@ -155,6 +155,15 @@ function logStore(name) {
       const d = new Date().toDateString();
       return read(name, []).filter(r => new Date(r.at).toDateString() === d);
     },
+    /* Counted back in whole days from this morning rather than by subtracting
+       hours, so a week is seven days on the calendar however the clocks moved
+       in the middle of it. */
+    lastDays(days) {
+      const start = new Date();
+      start.setHours(0, 0, 0, 0);
+      start.setDate(start.getDate() - (days - 1));
+      return read(name, []).filter(r => new Date(r.at) >= start);
+    },
   };
 }
 
@@ -260,17 +269,62 @@ export function wipe(which = 'all') {
   localStorage.removeItem(key(map[which] ?? which));
 }
 
+/**
+ * The energy figure to measure a day against when the profile is too empty to
+ * work one out.
+ *
+ * A filled profile gets an equation using height, weight, age and activity.
+ * With nothing to put in it, the only honest answer is a published reference
+ * intake, and there are two of those rather than one. A single figure for
+ * everyone lands about 600 kcal above what an average woman at low activity
+ * actually needs, which is the same mistake as quoting one haemoglobin range
+ * to everybody.
+ *
+ * 2000 and 2500 are the reference intakes used by the UK health service and
+ * by EU food labelling, where 2000 is also the figure printed on packaging
+ * for the average adult. Sex is the only thing being read here, so an unset
+ * profile takes 2000, the lower and more widely printed of the two.
+ */
+export function referenceEnergy(p = profile.get()) {
+  if (p.kcalGoal) return p.kcalGoal;
+  return p.sex === 'Male' ? 2500 : 2000;
+}
+
 /** Counts for the home dashboard, computed on read rather than stored. */
 export function summary() {
   const w = water.today().reduce((n, r) => n + (r.ml ?? 0), 0);
-  const kcal = food.today().reduce((n, r) => n + (r.kcal ?? 0), 0);
+  const eaten = food.today();
+  const kcal = eaten.reduce((n, r) => n + (r.kcal ?? 0), 0);
   const last = symptoms.all().at(-1);
   return {
     waterMl: w,
     waterGoalMl: 2000,
     kcal,
-    kcalGoal: profile.get().kcalGoal ?? 2200,
+    kcalGoal: referenceEnergy(),
+    // Absent on older entries, so it counts as none rather than breaking.
+    proteinG: eaten.reduce((n, r) => n + (r.proteinG ?? 0), 0),
     lastSymptom: last ?? null,
     medsDue: meds.all().filter(m => m.due).length,
+  };
+}
+
+/**
+ * Energy over the last seven days, and the daily average across them.
+ *
+ * The screen says the weekly total is what moves weight, and until this
+ * existed it only ever showed today, so it was asserting something it could
+ * not show. The average divides by days that have an entry rather than by
+ * seven, since a day nobody logged is a day with no data, not a day of
+ * nothing eaten.
+ */
+export function weekEnergy() {
+  const rows = food.lastDays(7);
+  const kcal = rows.reduce((n, r) => n + (r.kcal ?? 0), 0);
+  const days = new Set(rows.map(r => new Date(r.at).toDateString())).size;
+  return {
+    kcal,
+    days,
+    perDay: days ? Math.round(kcal / days) : 0,
+    proteinG: rows.reduce((n, r) => n + (r.proteinG ?? 0), 0),
   };
 }

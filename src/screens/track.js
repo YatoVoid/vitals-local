@@ -5,7 +5,7 @@
  */
 
 import { el, eyebrow, fieldLabel, panel, button, row, rows, ring, segmented, removableRow, numberOrNull } from '../app/ui.js';
-import { food, water, meds, labs, summary, profile } from '../app/store.js';
+import { food, water, meds, labs, summary, weekEnergy, profile } from '../app/store.js';
 import { compareIngredients, describeIngredient } from '../data/ingredients.js';
 import { open as openEpisodes } from '../app/episodes.js';
 import { MARKERS, assess, RANGE_NOTE } from '../data/labs.js';
@@ -33,20 +33,78 @@ export function renderTrackIndex(screen, { go }) {
   ));
 }
 
-/* ---------- Food ---------- */
-const QUICK_FOODS = [
-  { name: 'Oatmeal, bowl', kcal: 320 },
-  { name: 'Chicken and rice', kcal: 610 },
-  { name: 'Banana', kcal: 105 },
-  { name: 'Coffee, black', kcal: 5 },
-  { name: 'Eggs, two', kcal: 155 },
-  { name: 'Bread, slice', kcal: 80 },
+/* ---------- Food ----------
+ *
+ * The shortcuts are whatever this person eats, worked out from their own log.
+ * A fixed list cannot be right in 65 languages: it was six English items, so
+ * anyone whose breakfast is not oatmeal started every day by typing. Their own
+ * entries are already in their own language and their own portions.
+ *
+ * The starter set below is only for a log with nothing in it yet, and is kept
+ * short and staple on purpose rather than trying to represent anywhere.
+ */
+const STARTER_FOODS = [
+  { name: 'Rice, bowl', kcal: 205, proteinG: 4 },
+  { name: 'Egg', kcal: 78, proteinG: 6 },
+  { name: 'Bread, slice', kcal: 80, proteinG: 3 },
+  { name: 'Tea or coffee', kcal: 5, proteinG: 0 },
+];
+
+/**
+ * The shortcuts to offer: most often logged first, then most recent.
+ *
+ * Energy is the median of what was logged under that name rather than the
+ * mean, so one mistyped entry of 6000 does not drag the shortcut with it.
+ *
+ * @param {Array} log every food entry, oldest first
+ */
+export function quickFoods(log, limit = 6) {
+  if (!log.length) return STARTER_FOODS.map(f => ({ ...f, fromLog: false }));
+
+  const byName = new Map();
+  log.forEach((r, i) => {
+    const name = String(r.name ?? '').trim();
+    if (!name) return;
+    const seen = byName.get(name) ?? { name, kcals: [], proteins: [], count: 0, last: -1 };
+    seen.count++;
+    seen.last = i;
+    if (Number.isFinite(r.kcal)) seen.kcals.push(r.kcal);
+    if (Number.isFinite(r.proteinG)) seen.proteins.push(r.proteinG);
+    byName.set(name, seen);
+  });
+
+  const middle = xs => {
+    if (!xs.length) return null;
+    const s = [...xs].sort((a, b) => a - b);
+    return Math.round(s[Math.floor(s.length / 2)]);
+  };
+
+  return [...byName.values()]
+    .sort((a, b) => b.count - a.count || b.last - a.last)
+    .slice(0, limit)
+    .map(f => ({
+      name: f.name,
+      kcal: middle(f.kcals) ?? 0,
+      proteinG: middle(f.proteins),
+      fromLog: true,
+    }));
+}
+
+/* Whole, half and double, because a portion is usually one of those and a
+   number field for every tap would undo the point of a shortcut. */
+const PORTIONS = [
+  { id: 'half', label: 'Half', factor: 0.5 },
+  { id: 'one', label: 'One', factor: 1 },
+  { id: 'double', label: 'Double', factor: 2 },
 ];
 
 export function renderDiet(screen, { go, live }) {
+  let portion = 'one';
+
   const draw = () => {
     screen.replaceChildren();
     const s = summary();
+    const week = weekEnergy();
     const balance = s.kcal - s.kcalGoal;
 
     screen.appendChild(eyebrow('Food and energy'));
@@ -56,6 +114,9 @@ export function renderDiet(screen, { go, live }) {
       el('div', 'readout-big', String(s.kcal)),
       el('div', 'readout-unit', `of ${s.kcalGoal} kcal target`),
     );
+    if (s.proteinG > 0) {
+      head.appendChild(el('div', 'readout-unit', `${Math.round(s.proteinG)} g protein`));
+    }
     screen.appendChild(head);
 
     /* Show the maths rather than a verdict. */
@@ -65,21 +126,56 @@ export function renderDiet(screen, { go, live }) {
         `${s.kcal} eaten minus ${s.kcalGoal} target is ${balance > 0 ? '+' : ''}${balance} kcal. `
         + (balance <= 0
           ? 'Nothing to do about that on its own. A single day sits inside normal variation.'
-          : 'One day above target changes very little. The weekly total is what moves weight.')),
+          : 'One day above target changes very little. It is the run of days that moves weight.')),
     );
     math.style.marginBlockStart = 'var(--s-3)';
     screen.appendChild(math);
 
+    /* The line above talks about a run of days, so the run of days has to be
+       here. Until it was, the screen made a claim it could not show. */
+    if (week.days > 1) {
+      const wk = panel(
+        eyebrow('The last seven days'),
+        el('p', null,
+          `${week.kcal} kcal across ${week.days} days with an entry, `
+          + `which averages ${week.perDay} a day against a target of ${s.kcalGoal}. `
+          + 'Days with nothing logged are left out rather than counted as zero.'),
+      );
+      wk.style.marginBlockStart = 'var(--s-3)';
+      screen.appendChild(wk);
+    }
+
     screen.appendChild(el('h2', null, 'Add something'));
+
+    screen.appendChild(segmented(
+      PORTIONS.map(p => ({ id: p.id, label: p.label })),
+      portion,
+      id => { portion = id; draw(); },
+      'Portion',
+    ));
+
+    const factor = PORTIONS.find(p => p.id === portion)?.factor ?? 1;
+    const shortcuts = quickFoods(food.all());
     const quick = el('div', 'chiprow');
-    QUICK_FOODS.forEach(f => quick.appendChild(button(`${f.name}`, 'chipbtn', () => {
-      food.add({ name: f.name, kcal: f.kcal });
-      live.textContent = `${f.name} added`;
-      draw();
-    })));
+    shortcuts.forEach(f => {
+      const b = button(f.name, 'chipbtn', () => {
+        food.add({
+          name: f.name,
+          kcal: Math.round(f.kcal * factor),
+          ...(f.proteinG != null ? { proteinG: Math.round(f.proteinG * factor) } : {}),
+        });
+        live.textContent = `${f.name} added`;
+        draw();
+      });
+      /* A name out of the log is what this person typed, in their language.
+         Running their own diary through the translator would rewrite it. The
+         starter names are app text and are left to translate normally. */
+      if (f.fromLog) b.setAttribute('translate', 'no');
+      quick.appendChild(b);
+    });
     screen.appendChild(quick);
 
-    const custom = el('form', 'inline-form');
+    const custom = el('form', 'inline-form inline-form--pair');
     const nameField = el('input', 'field');
     nameField.placeholder = 'What did you eat';
     nameField.setAttribute('aria-label', 'Food name');
@@ -88,9 +184,17 @@ export function renderDiet(screen, { go, live }) {
     kcalField.inputMode = 'numeric';
     kcalField.placeholder = 'kcal';
     kcalField.setAttribute('aria-label', 'Calories');
+    /* Protein is optional. Asking for it as a required second number would
+       cost every entry a lookup, and a day of entries with it missing is
+       still a usable day of energy. */
+    const proField = el('input', 'field field--num');
+    proField.type = 'number';
+    proField.inputMode = 'numeric';
+    proField.placeholder = 'protein g';
+    proField.setAttribute('aria-label', 'Protein in grams, optional');
     const add = button('Add', 'btn', null);
     add.type = 'submit';
-    custom.append(nameField, kcalField, add);
+    custom.append(nameField, kcalField, proField, add);
     screen.appendChild(custom);
     const customHint = el('p', 'hint');
     screen.appendChild(customHint);
@@ -99,6 +203,7 @@ export function renderDiet(screen, { go, live }) {
       ev.preventDefault();
       const n = nameField.value.trim();
       const k = numberOrNull(kcalField.value);
+      const g = numberOrNull(proField.value);
       /* Both halves are required, and the reason is shown. A button that
          silently declines reads as broken. */
       if (!n) {
@@ -112,22 +217,47 @@ export function renderDiet(screen, { go, live }) {
         return;
       }
       customHint.textContent = '';
-      food.add({ name: n, kcal: Math.round(k) });
+      food.add({
+        name: n,
+        kcal: Math.round(k),
+        ...(g != null && g >= 0 ? { proteinG: Math.round(g) } : {}),
+      });
       live.textContent = `${n} added`;
       draw();
     });
 
     const today = food.today();
+
+    /* Adding is one tap, so taking it back is one tap, the same as water.
+       Typing a figure into the wrong row is easier here than there, and the
+       only way out was finding the entry and pressing it twice. */
+    if (today.length) {
+      const last = today[today.length - 1];
+      const undo = button(`Remove last, ${last.name}`, 'chipbtn chipbtn--undo', () => {
+        food.remove(last.id);
+        live.textContent = `${last.name} removed`;
+        draw();
+      });
+      undo.setAttribute('translate', 'no');
+      const undoRow = el('div', 'chiprow');
+      undoRow.appendChild(undo);
+      screen.appendChild(undoRow);
+    }
+
     screen.appendChild(el('h2', null, "Today's log"));
     if (!today.length) {
       screen.appendChild(el('p', 'empty', 'Nothing logged yet. Add a meal to start the day.'));
     } else {
-      const list = rows(...today.slice().reverse().map(r =>
-        removableRow(r.name, {
-          end: `${r.kcal} kcal`,
+      const list = rows(...today.slice().reverse().map(r => {
+        const entry = removableRow(r.name, {
+          end: r.proteinG != null ? `${r.kcal} kcal, ${r.proteinG} g` : `${r.kcal} kcal`,
           sub: new Date(r.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           onRemove: () => { food.remove(r.id); live.textContent = `${r.name} removed`; draw(); },
-        })));
+        });
+        // Someone's own diary entry, in their own words.
+        entry.querySelector('span')?.setAttribute('translate', 'no');
+        return entry;
+      }));
       screen.appendChild(list);
       screen.appendChild(el('p', 'hint', 'Tap an entry twice to remove it.'));
     }

@@ -114,6 +114,9 @@
   gap: var(--s-2);
   margin-block-start: var(--s-3);
 }
+/* The food entry carries a second number, so it gets its own track rather
+   than wrapping onto a row sized for something else. */
+.inline-form--pair { grid-template-columns: 1fr 5rem 5rem auto; }
 
 .field-row { display: grid; gap: var(--s-2); margin-block-end: var(--s-4); }
 
@@ -268,6 +271,11 @@
   .compare { grid-template-columns: 1fr; }
   .inline-form { grid-template-columns: 1fr auto; }
   .inline-form .field--num { grid-column: 1; }
+  /* Two numbers side by side on the row under the name, which keeps the
+     whole form to two rows on a narrow phone. */
+  .inline-form--pair { grid-template-columns: 1fr 1fr auto; }
+  .inline-form--pair .field { grid-column: 1 / -1; }
+  .inline-form--pair .field--num { grid-column: auto; }
 }
 
 /* ---- Setup ---- */
