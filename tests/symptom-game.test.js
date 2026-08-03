@@ -717,6 +717,38 @@ function walk(region, seed, script, limit = 12) {
   assert.notEqual(u.energy(eaten - goal, KJ), shownGap,
     'converting the difference on its own disagrees, so the screen must not do it');
 
+  /* The target follows a goal, because maintenance answers only one question.
+     Someone above the healthy range for their height was shown the figure
+     that keeps them there. */
+  const bm = await import('../src/app/body-metrics.js');
+  const m = { maintenance: 2400, sex: 'Female', weightKg: 70, bmr: 1600, factor: 1.5 };
+
+  assert.equal(bm.energyTarget(m, 'hold').kcal, 2400, 'holding is maintenance');
+  assert.equal(bm.energyTarget(m, 'lose').kcal, 1900, 'losing takes 500 off');
+  assert.equal(bm.energyTarget(m, 'gain').kcal, 2800, 'gaining adds 400');
+  assert.equal(bm.energyTarget(m, 'lose').perWeekKg, 0.5,
+    'a 500 a day deficit is about half a kilo a week');
+  assert.equal(bm.energyTarget(null, 'lose'), null,
+    'no maintenance means no target rather than an invented one');
+
+  /* The floor is the part that has to hold. Below roughly 1200 it is hard to
+     get a day's vitamins and minerals from the food that fits, which is why
+     guidance puts diets there under supervision. */
+  const small = { maintenance: 1500, sex: 'Female', weightKg: 48 };
+  const floored = bm.energyTarget(small, 'lose');
+  assert.equal(floored.kcal, 1200, 'the target stops at the floor, not at 1000');
+  assert.equal(floored.floored, true, 'and it says so, rather than quietly clamping');
+  assert.ok(Math.abs(floored.perWeekKg) < 0.5,
+    'the pace quoted is the one the floored target actually delivers');
+
+  const smallMale = bm.energyTarget({ maintenance: 1800, sex: 'Male' }, 'lose');
+  assert.equal(smallMale.kcal, 1500, 'the floor is higher for men');
+
+  // Protein rises while losing, because that is what holds onto muscle.
+  assert.equal(bm.proteinTarget(m, 'hold').grams, 56, '0.8 g per kg at 70 kg');
+  assert.equal(bm.proteinTarget(m, 'lose').grams, 84, '1.2 g per kg while losing');
+  assert.equal(bm.proteinTarget({}, 'lose'), null, 'no weight means no figure');
+
   delete globalThis.localStorage;
   delete globalThis.document;
 }

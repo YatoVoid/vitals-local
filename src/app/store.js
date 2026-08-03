@@ -294,6 +294,7 @@ export function referenceEnergy(p = profile.get()) {
   return p.sex === 'Male' ? 2500 : 2000;
 }
 
+
 /** Counts for the home dashboard, computed on read rather than stored. */
 export function summary() {
   const w = water.today().reduce((n, r) => n + (r.ml ?? 0), 0);
@@ -304,7 +305,6 @@ export function summary() {
     waterMl: w,
     waterGoalMl: 2000,
     kcal,
-    kcalGoal: referenceEnergy(),
     // Absent on older entries, so it counts as none rather than breaking.
     proteinG: eaten.reduce((n, r) => n + (r.proteinG ?? 0), 0),
     lastSymptom: last ?? null,

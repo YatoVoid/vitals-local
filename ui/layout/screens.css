@@ -118,6 +118,17 @@
    than wrapping onto a row sized for something else. */
 .inline-form--pair { grid-template-columns: 1fr 5rem 5rem auto; }
 
+/* A number with its unit underneath. Inside the box the word ran out of a
+   narrow field, and a placeholder leaves as soon as anyone types, which is
+   when it is most use. */
+.stackfield { display: grid; gap: 2px; min-inline-size: 0; }
+.stackfield__unit {
+  font-size: var(--t-micro);
+  color: var(--ink-dim);
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
 .field-row { display: grid; gap: var(--s-2); margin-block-end: var(--s-4); }
 
 /* ---- Water timeline ---- */

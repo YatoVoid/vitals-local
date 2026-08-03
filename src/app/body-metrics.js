@@ -6,7 +6,7 @@
  * threshold is 0.5 for adults regardless of height or sex.
  */
 
-import { profile, settings } from './store.js';
+import { profile, settings, referenceEnergy } from './store.js';
 import { isUS, kgToLb as toLb, cmToIn as toIn } from './units.js';
 
 export const BMI_BANDS = [
@@ -68,6 +68,104 @@ export function metrics() {
     whtr: whtr ? Math.round(whtr * 100) / 100 : null,
     whtrBand,
   };
+}
+
+/* ---- Energy target ----
+ *
+ * Maintenance is what the equation gives, and on its own it answers only one
+ * question: what holds this weight. Someone above the healthy range for their
+ * height, or wanting to be heavier, was still shown maintenance, so the number
+ * was for a goal they had not chosen.
+ *
+ * A goal is asked for and the adjustment is applied to maintenance:
+ *
+ *   Losing   500 kcal below, which is about half a kilo a week against the
+ *            7700 kcal a kilo of body fat holds. NICE and the NHS describe
+ *            600 kcal deficit diets for the same half kilo, so this sits at
+ *            the gentler end of the range they use.
+ *   Holding  maintenance, unchanged.
+ *   Gaining  400 kcal above, for roughly a quarter to half a kilo a week. The
+ *            evidence for a surplus size is thinner than for a deficit, so
+ *            this is deliberately modest.
+ *
+ * The floor is the part worth being careful with. US obesity guidance puts
+ * supervised low calorie diets at 1000 to 1200 kcal for women and 1200 to
+ * 1600 for men, so a target is never printed below 1200 or 1500. Where the
+ * deficit would go under, the floor is used and the screen says so rather
+ * than quietly showing a different number than the arithmetic implies.
+ */
+export const GOALS = [
+  { id: 'lose', label: 'Lose weight', delta: -500 },
+  { id: 'hold', label: 'Stay as I am', delta: 0 },
+  { id: 'gain', label: 'Gain weight', delta: 400 },
+];
+
+const FLOOR = { Male: 1500, other: 1200 };
+
+/** Roughly the energy in a kilogram of body fat, the usual planning figure. */
+const KCAL_PER_KG = 7700;
+
+/**
+ * The daily energy target, with everything needed to show the working.
+ *
+ * Null when maintenance cannot be worked out, so the caller falls back to a
+ * reference intake rather than this inventing one.
+ *
+ * @param {object} m the result of metrics()
+ * @param {string} goalId one of GOALS
+ */
+export function energyTarget(m, goalId = 'hold') {
+  if (!m?.maintenance) return null;
+  const goal = GOALS.find(g => g.id === goalId) ?? GOALS[1];
+  const floor = m.sex === 'Male' ? FLOOR.Male : FLOOR.other;
+
+  const wanted = m.maintenance + goal.delta;
+  const kcal = Math.max(wanted, floor);
+  const floored = kcal !== wanted;
+
+  /* What that pace actually comes to, from the target that will be used
+     rather than the one asked for, so a floored target does not keep
+     promising the rate it no longer delivers. */
+  const perWeekKg = Math.round(((m.maintenance - kcal) * 7 / KCAL_PER_KG) * 10) / 10;
+
+  return { kcal, goal, floored, floor, perWeekKg, maintenance: m.maintenance };
+}
+
+/**
+ * Protein for the day, in grams.
+ *
+ * 0.8 g per kilogram is the reference intake, the amount that prevents
+ * deficiency rather than the amount that is best. Losing weight raises it:
+ * protein is what holds onto muscle while the rest comes off, which is the
+ * whole difference between losing fat and losing both.
+ */
+export function proteinTarget(m, goalId = 'hold') {
+  if (!m?.weightKg) return null;
+  const perKg = goalId === 'lose' ? 1.2 : 0.8;
+  return { grams: Math.round(m.weightKg * perKg), perKg };
+}
+
+/** The goal on the profile, defaulting to holding rather than assuming one. */
+export function currentGoal() {
+  const id = profile.get().goal;
+  return GOALS.find(g => g.id === id) ?? GOALS.find(g => g.id === 'hold');
+}
+
+/**
+ * The energy figure a day is measured against, for any screen that shows one.
+ *
+ * A worked out target when the profile carries enough to work one out, and a
+ * published reference intake when it does not. Nothing is stored: it follows
+ * the profile, so editing a weight moves it without anything having to
+ * remember to write it back.
+ */
+export function dailyEnergy() {
+  return energyTarget(metrics(), currentGoal().id)?.kcal ?? referenceEnergy();
+}
+
+/** The protein figure for the day, or null when weight is unknown. */
+export function dailyProtein() {
+  return proteinTarget(metrics(), currentGoal().id);
 }
 
 /** Units, so the same numbers read correctly for a US profile. */

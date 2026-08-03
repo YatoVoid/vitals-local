@@ -7,6 +7,7 @@
 import { el, eyebrow, fieldLabel, panel, button, row, rows, segmented, toggle, removableRow, numberOrNull } from '../app/ui.js';
 import { settings, profile, symptoms, exportAll, importAll, usage, wipe, applySettings } from '../app/store.js';
 import { display as unitDisplay, store as unitStore, units as unitWords } from '../app/units.js';
+import { metrics, energyTarget, proteinTarget, currentGoal, GOALS } from '../app/body-metrics.js';
 import { language as i18nLanguage } from '../i18n/languages.js';
 
 const THEME_NAMES = { kawaii: 'Soft', neon: 'Blue neon', crt: 'Retro CRT' };
@@ -294,31 +295,78 @@ export function renderProfile(screen, { live }) {
       screen.appendChild(box);
     });
 
+    /* ---- What the target is for ----
+       Maintenance answers one question, what holds this weight, and until a
+       goal was asked for that was the only answer anyone got. Someone above
+       the healthy range for their height was still shown the figure that
+       keeps them there. */
+    const m = metrics();
+    screen.appendChild(el('h2', null, 'What you want your weight to do'));
+    screen.appendChild(segmented(
+      GOALS.map(g => ({ id: g.id, label: g.label })),
+      currentGoal().id,
+      id => { profile.set({ goal: id }); live.textContent = 'Goal saved'; draw(); },
+      'Weight goal',
+    ));
+
+    if (m?.band && m.direction !== 'none' && currentGoal().id === 'hold') {
+      /* Said once, plainly, and it does not overrule the choice. */
+      screen.appendChild(el('p', 'hint',
+        m.direction === 'lose'
+          ? `Your BMI of ${m.bmi} is ${m.band.label.toLowerCase()}. Holding is a `
+            + 'choice you can make, and this is here so it is a choice rather '
+            + 'than the default.'
+          : `Your BMI of ${m.bmi} is ${m.band.label.toLowerCase()}, so gaining is `
+            + 'worth considering over holding.'));
+    }
+
     /* Derived numbers show their working rather than appearing as a verdict. */
     const { age, sex, heightCm, weightKg, activity } = p;
-    if (age && heightCm && weightKg) {
+    const target = energyTarget(m, currentGoal().id);
+    if (target && age && heightCm && weightKg) {
       const male = sex === 'Male';
-      const bmr = Math.round(10 * weightKg + 6.25 * heightCm - 5 * age + (male ? 5 : -161));
-      const factor = { Low: 1.2, Some: 1.375, Regular: 1.55, Heavy: 1.725 }[activity] ?? 1.2;
-      const target = Math.round(bmr * factor);
-      /* Only when it actually moved. Every field on this screen redraws the
-         whole thing on change, so an unconditional write here stored the same
-         number again on each edit of sleep, alcohol or anything else. */
-      if (target !== p.kcalGoal) profile.set({ kcalGoal: target });
-
       const box = panel(
         eyebrow('Your energy target, and how it was worked out'),
         el('p', null,
-          `Resting need comes to ${bmr} kcal from the Mifflin St Jeor equation: `
+          `Resting need comes to ${m.bmr} kcal from the Mifflin St Jeor equation: `
           + `10 times ${weightKg} kg, plus 6.25 times ${heightCm} cm, minus 5 times `
-          + `${age} years, ${male ? 'plus 5' : 'minus 161'}. Multiplied by ${factor} `
+          + `${age} years, ${male ? 'plus 5' : 'minus 161'}. Multiplied by ${m.factor} `
           + `for a ${(activity ?? 'low').toLowerCase()} activity level, that is `
-          + `${target} kcal a day.`),
-        el('p', null,
-          'That equation is a population average. Individual resting need scatters '
-          + 'around it by roughly 200 kcal in either direction, so treat the number '
-          + 'as a starting line and adjust it against what actually happens.'),
+          + `${m.maintenance} kcal a day to stay where you are.`),
       );
+
+      if (target.goal.delta !== 0) {
+        box.appendChild(el('p', null, target.floored
+          ? `${target.goal.label} would take ${Math.abs(target.goal.delta)} kcal off `
+            + `that, but the target stops at ${target.floor}. Below that it is hard `
+            + 'to get the vitamins and minerals a day needs from the food that fits, '
+            + `which is why guidance puts supervised diets there. At ${target.kcal} `
+            + `the pace is about ${Math.abs(target.perWeekKg)} kg a week.`
+          : `${target.goal.label} ${target.goal.delta < 0 ? 'takes' : 'adds'} `
+            + `${Math.abs(target.goal.delta)} kcal ${target.goal.delta < 0 ? 'off' : 'to'} `
+            + `that, so ${target.kcal} kcal a day. Against the roughly 7700 kcal a `
+            + `kilogram of body fat holds, that is about `
+            + `${Math.abs(target.perWeekKg)} kg a week.`));
+      }
+
+      box.appendChild(el('p', null,
+        'That equation is a population average. Individual resting need scatters '
+        + 'around it by roughly 200 kcal in either direction, so treat the number '
+        + 'as a starting line and adjust it against what actually happens on the '
+        + 'scale over a few weeks.'));
+
+      const pro = proteinTarget(m, currentGoal().id);
+      if (pro) {
+        box.appendChild(el('p', null,
+          `Protein comes to ${pro.grams} g a day, at ${pro.perKg} g per kilogram. `
+          + (pro.perKg > 0.8
+            ? 'That is above the 0.8 g reference intake on purpose. Losing weight '
+              + 'without enough protein takes muscle with the fat, and protein is '
+              + 'what stops that.'
+            : '0.8 g per kilogram is the reference intake, which is the amount '
+              + 'that prevents deficiency rather than the amount that is best.')));
+      }
+
       box.style.marginBlockStart = 'var(--s-5)';
       screen.appendChild(box);
     }

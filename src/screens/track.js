@@ -10,6 +10,7 @@ import { compareIngredients, describeIngredient } from '../data/ingredients.js';
 import { open as openEpisodes } from '../app/episodes.js';
 import { MARKERS, assess, RANGE_NOTE } from '../data/labs.js';
 import { energy as showEnergy, energyUnit, storeEnergy } from '../app/units.js';
+import { dailyEnergy, dailyProtein, currentGoal } from '../app/body-metrics.js';
 
 /* "gl" is not an abbreviation anyone uses, and it read as a word cut off
    halfway. The row has room for the whole word. */
@@ -21,11 +22,12 @@ const glassCount = ml => {
 /* ---------- Index ---------- */
 export function renderTrackIndex(screen, { go }) {
   const s = summary();
+  const goalKcal = dailyEnergy();
   screen.appendChild(eyebrow('Track'));
   screen.appendChild(el('h1', null, 'What you took in today'));
 
   screen.appendChild(rows(
-    row('Food and energy', { end: `${showEnergy(s.kcal)} ${energyUnit()}`, sub: `Target ${showEnergy(s.kcalGoal)}`, onClick: () => go('#/track/diet') }),
+    row('Food and energy', { end: `${showEnergy(s.kcal)} ${energyUnit()}`, sub: `Target ${showEnergy(goalKcal)}`, onClick: () => go('#/track/diet') }),
     row('Water', { end: glassCount(s.waterMl), sub: `Target ${Math.round(s.waterGoalMl / 250)} glasses`, onClick: () => go('#/track/hydration') }),
     row('Medicines', { end: meds.all().length ? `${meds.all().length}` : 'None', sub: 'Compare a label, set a reminder', onClick: () => go('#/track/meds') }),
     row('Lab results', { end: labs.all().length ? `${labs.all().length}` : 'None', sub: 'Enter values, see the range', onClick: () => go('#/track/labs') }),
@@ -106,17 +108,25 @@ export function renderDiet(screen, { go, live }) {
     screen.replaceChildren();
     const s = summary();
     const week = weekEnergy();
-    const balance = s.kcal - s.kcalGoal;
+    const goalKcal = dailyEnergy();
+    const pro = dailyProtein();
+    const balance = s.kcal - goalKcal;
 
     screen.appendChild(eyebrow('Food and energy'));
 
     const head = panel();
     head.append(
       el('div', 'readout-big', String(showEnergy(s.kcal))),
-      el('div', 'readout-unit', `of ${showEnergy(s.kcalGoal)} ${energyUnit()} target`),
+      el('div', 'readout-unit', `of ${showEnergy(goalKcal)} ${energyUnit()} target`),
     );
-    if (s.proteinG > 0) {
-      head.appendChild(el('div', 'readout-unit', `${Math.round(s.proteinG)} g protein`));
+    if (s.proteinG > 0 || pro) {
+      head.appendChild(el('div', 'readout-unit', pro
+        ? `${Math.round(s.proteinG)} of ${pro.grams} g protein`
+        : `${Math.round(s.proteinG)} g protein`));
+    }
+    // Says which goal the target belongs to, so the number is never unexplained.
+    if (currentGoal().id !== 'hold') {
+      head.appendChild(el('div', 'readout-unit', currentGoal().label.toLowerCase()));
     }
     screen.appendChild(head);
 
@@ -127,7 +137,7 @@ export function renderDiet(screen, { go, live }) {
        that did not add up in kilojoules, and a sum that fails in front of the
        reader is worse than no sum. */
     const shownEaten = showEnergy(s.kcal);
-    const shownTarget = showEnergy(s.kcalGoal);
+    const shownTarget = showEnergy(goalKcal);
     const shownGap = shownEaten - shownTarget;
     const math = panel(
       eyebrow(balance <= 0 ? 'Under target' : 'Over target'),
@@ -149,7 +159,7 @@ export function renderDiet(screen, { go, live }) {
         el('p', null,
           `${showEnergy(week.kcal)} ${energyUnit()} across ${week.days} days with an entry, `
           + `which averages ${showEnergy(week.perDay)} a day against a target of `
-          + `${showEnergy(s.kcalGoal)}. `
+          + `${showEnergy(goalKcal)}. `
           + 'Days with nothing logged are left out rather than counted as zero.'),
       );
       wk.style.marginBlockStart = 'var(--s-3)';
@@ -186,26 +196,36 @@ export function renderDiet(screen, { go, live }) {
     });
     screen.appendChild(quick);
 
+    /* The unit sits under each box rather than inside it. As placeholder text
+       "protein g" ran out of a number field on a narrow phone, and a
+       placeholder disappears the moment anyone types, which is exactly when
+       they might want to check which box they are in. */
     const custom = el('form', 'inline-form inline-form--pair');
     const nameField = el('input', 'field');
     nameField.placeholder = 'What did you eat';
     nameField.setAttribute('aria-label', 'Food name');
-    const kcalField = el('input', 'field field--num');
-    kcalField.type = 'number';
-    kcalField.inputMode = 'numeric';
-    kcalField.placeholder = energyUnit();
-    kcalField.setAttribute('aria-label', `Energy in ${energyUnit()}`);
+
+    const numbered = (cls, label, aria) => {
+      const wrap = el('div', 'stackfield');
+      const input = el('input', `field field--num ${cls}`);
+      input.type = 'number';
+      input.inputMode = 'numeric';
+      input.setAttribute('aria-label', aria);
+      wrap.append(input, el('span', 'stackfield__unit', label));
+      return { wrap, input };
+    };
+
+    const kcalBox = numbered('', energyUnit(), `Energy in ${energyUnit()}`);
+    const kcalField = kcalBox.input;
     /* Protein is optional. Asking for it as a required second number would
        cost every entry a lookup, and a day of entries with it missing is
        still a usable day of energy. */
-    const proField = el('input', 'field field--num');
-    proField.type = 'number';
-    proField.inputMode = 'numeric';
-    proField.placeholder = 'protein g';
-    proField.setAttribute('aria-label', 'Protein in grams, optional');
+    const proBox = numbered('', 'protein, g', 'Protein in grams, optional');
+    const proField = proBox.input;
+
     const add = button('Add', 'btn', null);
     add.type = 'submit';
-    custom.append(nameField, kcalField, proField, add);
+    custom.append(nameField, kcalBox.wrap, proBox.wrap, add);
     screen.appendChild(custom);
     const customHint = el('p', 'hint');
     screen.appendChild(customHint);

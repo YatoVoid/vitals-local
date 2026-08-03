@@ -8,6 +8,7 @@
 
 import { el, eyebrow, panel, tile, ring, button, reorderable } from '../app/ui.js';
 import { summary, settings, profile } from '../app/store.js';
+import { dailyEnergy } from '../app/body-metrics.js';
 import { lastConditions, uvBand, airBand, sunAdvice } from '../app/weather.js';
 
 function greeting() {
@@ -132,9 +133,10 @@ function tileBuilders(s, go) {
     },
 
     energy: () => {
+      const goalKcal = dailyEnergy();
       const t = el('button', 'tile2 tile2--ring');
       t.type = 'button';
-      t.append(eyebrow('Energy'), ring(s.kcal, s.kcalGoal, 'kcal', `${s.kcal} of ${s.kcalGoal}`));
+      t.append(eyebrow('Energy'), ring(s.kcal, goalKcal, 'kcal', `${s.kcal} of ${goalKcal}`));
       t.addEventListener('click', () => go('#/track/diet'));
       return t;
     },
