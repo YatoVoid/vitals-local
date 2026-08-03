@@ -22,8 +22,9 @@ const dayLabel = () => new Date().toLocaleDateString([], {
   weekday: 'long', month: 'short', day: 'numeric',
 });
 
-/* The arrangement someone gets before they move anything. */
-export const DEFAULT_ORDER = ['symptoms', 'water', 'energy', 'meds', 'uv', 'air'];
+/* The arrangement someone gets before they move anything. Today first, then
+   what it is like outside, then what has already been recorded. */
+export const DEFAULT_ORDER = ['water', 'energy', 'uv', 'air', 'symptoms', 'meds'];
 
 /**
  * The order to draw in, given what was saved and what exists now.

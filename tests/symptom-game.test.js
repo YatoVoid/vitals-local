@@ -500,6 +500,12 @@ function walk(region, seed, script, limit = 12) {
 
   const { resolveOrder, DEFAULT_ORDER } = await import('../src/screens/home.js');
 
+  /* The arrangement itself was asked for, so it is pinned rather than left to
+     whatever the tile builders happen to be declared in. */
+  assert.deepEqual(DEFAULT_ORDER,
+    ['water', 'energy', 'uv', 'air', 'symptoms', 'meds'],
+    'the default arrangement is the one that was asked for');
+
   assert.deepEqual(resolveOrder(undefined), DEFAULT_ORDER, 'no saved order gives the default');
   assert.deepEqual(resolveOrder(null), DEFAULT_ORDER);
   assert.deepEqual(resolveOrder('nonsense'), DEFAULT_ORDER, 'a damaged value falls back');
