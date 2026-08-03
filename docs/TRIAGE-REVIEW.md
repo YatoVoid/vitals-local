@@ -1,8 +1,9 @@
 # Triage review
 
 Findings from reading `src/triage/` against its own engine, with the
-measurement behind each one. Nothing here has been changed. The work is
-tracked in `.nightshift/triage-precision/`.
+measurement behind each one. Nothing has been changed in response to them yet.
+They are listed worst first, by what a wrong answer costs the person reading
+it rather than by effort.
 
 Figures come from simulating sessions against the real banks and the real
 engine. Answers are picked uniformly at random, which is not how anyone

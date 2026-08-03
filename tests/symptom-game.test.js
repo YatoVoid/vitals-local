@@ -614,6 +614,36 @@ function walk(region, seed, script, limit = 12) {
   assert.notEqual(nextQuestion(back, bank)?.id, q2.id, 'and does not re-offer it');
 }
 
+/* ---- Nothing stray is committed ----
+   A shell redirect inside a quoted command writes a file named after whatever
+   followed the bracket, and `git add -A` then commits it. They are empty, they
+   sort to the top of the listing, and they are the first thing anyone sees. ---- */
+{
+  const { execFileSync } = await import('node:child_process');
+  const { statSync } = await import('node:fs');
+  const { join, dirname } = await import('node:path');
+  const { fileURLToPath } = await import('node:url');
+  const root = join(dirname(fileURLToPath(import.meta.url)), '..');
+
+  let tracked = [];
+  try {
+    tracked = execFileSync('git', ['ls-files'], { cwd: root, encoding: 'utf8' })
+      .split('\n').filter(Boolean);
+  } catch { tracked = []; }   // not a checkout, nothing to check
+
+  const ALLOWED_WITHOUT_EXTENSION = new Set(['LICENSE']);
+  const junk = tracked.filter(p => {
+    const name = p.split('/').pop();
+    if (name.startsWith('.') || ALLOWED_WITHOUT_EXTENSION.has(name)) return false;
+    const odd = !name.includes('.') || /[(){}[\]<>'"|,+]/.test(name);
+    if (!odd) return false;
+    let empty = false;
+    try { empty = statSync(join(root, p)).size === 0; } catch {}
+    return empty || /[(){}[\]<>'"|,+]/.test(name);
+  });
+  assert.deepEqual(junk, [], 'these look like shell artefacts rather than files');
+}
+
 /* ---- Offline precache ----
    A module added to the tree but not to sw.js loads fine online and fails the
    moment someone opens the app without a network, which is the one case the
