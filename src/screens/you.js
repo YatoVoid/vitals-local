@@ -93,6 +93,24 @@ export function renderSettings(screen, { go, live }) {
       'Units',
     ));
 
+    /* Separate from the switch above, because the two do not agree. Australia
+       and most of Europe are metric and read food energy in kilojoules. */
+    screen.appendChild(el('h2', null, 'Energy'));
+    screen.appendChild(segmented(
+      [{ id: 'kcal', label: 'Calories' }, { id: 'kj', label: 'Kilojoules' }],
+      s.energyUnit,
+      id => {
+        settings.set({ energyUnit: id });
+        live.textContent = id === 'kj' ? 'Kilojoules' : 'Calories';
+        draw();
+      },
+      'Energy unit',
+    ));
+    screen.appendChild(el('p', 'hint',
+      'What food and targets are shown in. Entries are kept the same either '
+      + 'way, so switching relabels what you already logged rather than '
+      + 'changing it.'));
+
     screen.appendChild(el('h2', null, 'Language'));
     const langNow = i18nLanguage(s.language ?? 'en');
     const langRow = row(langNow.name, {

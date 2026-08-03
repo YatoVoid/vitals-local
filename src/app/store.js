@@ -98,6 +98,10 @@ const SETTING_DEFAULTS = {
   language: 'en',
   country: 'US',
   units: 'metric',
+  /* Its own setting rather than part of `units`, because the two do not line
+     up. Australia, New Zealand and much of Europe are metric and read energy
+     in kilojoules, so a metric or US switch cannot answer this. */
+  energyUnit: 'kcal',
   textSize: 'normal',
 };
 

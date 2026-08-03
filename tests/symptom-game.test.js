@@ -681,6 +681,42 @@ function walk(region, seed, script, limit = 12) {
   assert.equal(picked[2].proteinG, 14, 'protein carries through to the shortcut');
   assert.ok(picked.every(f => f.fromLog), 'these came from the log and must not be translated');
 
+  /* Kilojoules are their own setting, not a rider on metric and US. Someone
+     in Australia is metric and reads kilojoules, so the two switches have to
+     move independently. What is stored stays kcal either way. */
+  const u = await import('../src/app/units.js');
+  const KCAL = { units: 'metric', energyUnit: 'kcal' };
+  const KJ = { units: 'metric', energyUnit: 'kj' };
+
+  assert.equal(u.energyUnit(KCAL), 'kcal');
+  assert.equal(u.energyUnit(KJ), 'kJ');
+  assert.equal(u.usesKj({ units: 'us', energyUnit: 'kcal' }), false,
+    'US units do not imply kilojoules');
+  assert.equal(u.usesKj({ units: 'metric', energyUnit: 'kj' }), true,
+    'metric does not imply calories');
+
+  assert.equal(u.energy(100, KCAL), 100);
+  assert.equal(u.energy(100, KJ), 418, '100 kcal is 418 kJ at the labelling figure');
+  assert.equal(u.energy(2000, KJ), 8370, 'a day sized figure rounds to the ten');
+  assert.equal(u.energy(null, KJ), null);
+
+  // A number typed in kilojoules comes back as the same energy in kcal.
+  const typed = u.storeEnergy(8368, KJ);
+  assert.equal(Math.round(typed), 2000, 'typing in kilojoules stores kcal');
+  assert.equal(u.storeEnergy(2000, KCAL), 2000, 'calories are stored as typed');
+  assert.equal(u.withEnergy(500, KJ), '2090 kJ');
+
+  /* The screen prints "eaten minus target is difference", so the three have to
+     agree once rounded. Converting the difference on its own does not agree,
+     which is why the screen subtracts the two figures it already shows. This
+     pins the trap rather than the workaround: if converting separately ever
+     starts matching, the rounding changed and the screen wants rechecking. */
+  const eaten = 405, goal = 2000;
+  const shownGap = u.energy(eaten, KJ) - u.energy(goal, KJ);
+  assert.equal(shownGap, -6680, 'the difference of the two figures on screen');
+  assert.notEqual(u.energy(eaten - goal, KJ), shownGap,
+    'converting the difference on its own disagrees, so the screen must not do it');
+
   delete globalThis.localStorage;
   delete globalThis.document;
 }

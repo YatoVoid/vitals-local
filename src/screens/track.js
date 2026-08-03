@@ -9,6 +9,7 @@ import { food, water, meds, labs, summary, weekEnergy, profile } from '../app/st
 import { compareIngredients, describeIngredient } from '../data/ingredients.js';
 import { open as openEpisodes } from '../app/episodes.js';
 import { MARKERS, assess, RANGE_NOTE } from '../data/labs.js';
+import { energy as showEnergy, energyUnit, storeEnergy } from '../app/units.js';
 
 /* "gl" is not an abbreviation anyone uses, and it read as a word cut off
    halfway. The row has room for the whole word. */
@@ -24,7 +25,7 @@ export function renderTrackIndex(screen, { go }) {
   screen.appendChild(el('h1', null, 'What you took in today'));
 
   screen.appendChild(rows(
-    row('Food and energy', { end: `${s.kcal} kcal`, sub: `Target ${s.kcalGoal}`, onClick: () => go('#/track/diet') }),
+    row('Food and energy', { end: `${showEnergy(s.kcal)} ${energyUnit()}`, sub: `Target ${showEnergy(s.kcalGoal)}`, onClick: () => go('#/track/diet') }),
     row('Water', { end: glassCount(s.waterMl), sub: `Target ${Math.round(s.waterGoalMl / 250)} glasses`, onClick: () => go('#/track/hydration') }),
     row('Medicines', { end: meds.all().length ? `${meds.all().length}` : 'None', sub: 'Compare a label, set a reminder', onClick: () => go('#/track/meds') }),
     row('Lab results', { end: labs.all().length ? `${labs.all().length}` : 'None', sub: 'Enter values, see the range', onClick: () => go('#/track/labs') }),
@@ -111,19 +112,28 @@ export function renderDiet(screen, { go, live }) {
 
     const head = panel();
     head.append(
-      el('div', 'readout-big', String(s.kcal)),
-      el('div', 'readout-unit', `of ${s.kcalGoal} kcal target`),
+      el('div', 'readout-big', String(showEnergy(s.kcal))),
+      el('div', 'readout-unit', `of ${showEnergy(s.kcalGoal)} ${energyUnit()} target`),
     );
     if (s.proteinG > 0) {
       head.appendChild(el('div', 'readout-unit', `${Math.round(s.proteinG)} g protein`));
     }
     screen.appendChild(head);
 
-    /* Show the maths rather than a verdict. */
+    /* Show the maths rather than a verdict.
+
+       The difference is taken between the two figures on screen rather than
+       converted on its own. Rounding each of the three separately gave a line
+       that did not add up in kilojoules, and a sum that fails in front of the
+       reader is worse than no sum. */
+    const shownEaten = showEnergy(s.kcal);
+    const shownTarget = showEnergy(s.kcalGoal);
+    const shownGap = shownEaten - shownTarget;
     const math = panel(
       eyebrow(balance <= 0 ? 'Under target' : 'Over target'),
       el('p', null,
-        `${s.kcal} eaten minus ${s.kcalGoal} target is ${balance > 0 ? '+' : ''}${balance} kcal. `
+        `${shownEaten} eaten minus ${shownTarget} target is `
+        + `${shownGap > 0 ? '+' : ''}${shownGap} ${energyUnit()}. `
         + (balance <= 0
           ? 'Nothing to do about that on its own. A single day sits inside normal variation.'
           : 'One day above target changes very little. It is the run of days that moves weight.')),
@@ -137,8 +147,9 @@ export function renderDiet(screen, { go, live }) {
       const wk = panel(
         eyebrow('The last seven days'),
         el('p', null,
-          `${week.kcal} kcal across ${week.days} days with an entry, `
-          + `which averages ${week.perDay} a day against a target of ${s.kcalGoal}. `
+          `${showEnergy(week.kcal)} ${energyUnit()} across ${week.days} days with an entry, `
+          + `which averages ${showEnergy(week.perDay)} a day against a target of `
+          + `${showEnergy(s.kcalGoal)}. `
           + 'Days with nothing logged are left out rather than counted as zero.'),
       );
       wk.style.marginBlockStart = 'var(--s-3)';
@@ -182,8 +193,8 @@ export function renderDiet(screen, { go, live }) {
     const kcalField = el('input', 'field field--num');
     kcalField.type = 'number';
     kcalField.inputMode = 'numeric';
-    kcalField.placeholder = 'kcal';
-    kcalField.setAttribute('aria-label', 'Calories');
+    kcalField.placeholder = energyUnit();
+    kcalField.setAttribute('aria-label', `Energy in ${energyUnit()}`);
     /* Protein is optional. Asking for it as a required second number would
        cost every entry a lookup, and a day of entries with it missing is
        still a usable day of energy. */
@@ -212,14 +223,14 @@ export function renderDiet(screen, { go, live }) {
         return;
       }
       if (k == null || k <= 0) {
-        customHint.textContent = 'Add the calories too, or pick one of the items above.';
+        customHint.textContent = `Add the ${energyUnit()} too, or pick one of the items above.`;
         kcalField.focus();
         return;
       }
       customHint.textContent = '';
       food.add({
         name: n,
-        kcal: Math.round(k),
+        kcal: Math.round(storeEnergy(k)),
         ...(g != null && g >= 0 ? { proteinG: Math.round(g) } : {}),
       });
       live.textContent = `${n} added`;
@@ -250,7 +261,9 @@ export function renderDiet(screen, { go, live }) {
     } else {
       const list = rows(...today.slice().reverse().map(r => {
         const entry = removableRow(r.name, {
-          end: r.proteinG != null ? `${r.kcal} kcal, ${r.proteinG} g` : `${r.kcal} kcal`,
+          end: r.proteinG != null
+            ? `${showEnergy(r.kcal)} ${energyUnit()}, ${r.proteinG} g`
+            : `${showEnergy(r.kcal)} ${energyUnit()}`,
           sub: new Date(r.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           onRemove: () => { food.remove(r.id); live.textContent = `${r.name} removed`; draw(); },
         });
