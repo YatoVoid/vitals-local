@@ -8,6 +8,7 @@
 import { SCREENS, TABS, resolveRoute } from './routes.js';
 import { onWriteError } from './store.js';
 import { enableDragScroll } from './ui.js';
+import { refreshIfStale, onConditions } from './weather.js';
 import * as i18n from '../i18n/index.js';
 
 const el = (tag, cls, text) => {
@@ -156,7 +157,10 @@ export function boot(mountPoint) {
     location.hash = route;
   }
 
-  function render() {
+  /* `quiet` redraws in place with no transition. A screen that sliding in
+     because a background reading landed would read as a navigation nobody
+     asked for. */
+  function render({ quiet = false } = {}) {
     const route = location.hash || ROOT;
     const def = resolveRoute(route) ?? SCREENS[ROOT];
     const nextDepth = (def.depth ?? 0);
@@ -169,7 +173,7 @@ export function boot(mountPoint) {
     const panel = el('section', 'screen');
     if (def.bleed) panel.classList.add('screen--bleed');
     panel.dataset.route = route;
-    if (current) panel.dataset.enter = direction;
+    if (current && !quiet) panel.dataset.enter = direction;
 
     /* The scroller is full width so the wheel works anywhere on screen. The
        readable column is an inner wrapper, except for screens that own their
@@ -181,7 +185,10 @@ export function boot(mountPoint) {
     }
     def.render(target, { go, live });
 
-    if (current) {
+    // Where the person had scrolled to, so a quiet redraw does not move it.
+    const keptScroll = quiet && current ? current.scrollTop : 0;
+
+    if (current && !quiet) {
       const old = current;
       old.dataset.exit = direction;
       old.addEventListener('animationend', () => old.remove(), { once: true });
@@ -192,7 +199,7 @@ export function boot(mountPoint) {
       host.replaceChildren(panel);
     }
     current = panel;
-    panel.scrollTop = 0;
+    panel.scrollTop = keptScroll;
 
     /* One pass over the whole shell. Three separate calls cancelled each
        other, since each new pass aborts the one before it. */
@@ -206,7 +213,9 @@ export function boot(mountPoint) {
       node.setAttribute('aria-current', on ? 'page' : 'false');
     });
 
-    live.textContent = def.title;
+    // Announcing the screen again on a background redraw would read as a
+    // navigation to anyone listening rather than looking.
+    if (!quiet) live.textContent = def.title;
   }
 
   // Anything rendered later, by a screen or a component, is picked up too.
@@ -217,6 +226,32 @@ export function boot(mountPoint) {
   // Changing language rebuilds the screen so every string goes through the
   // translator again, including ones the previous language had cached.
   window.addEventListener('vitals:language', () => { current = null; render(); });
+
+  /* ---- Keeping the outside reading current ----
+   *
+   * A reading has an age, and the only thing that fixes an old one is asking
+   * again. Doing that on demand meant the figure was as old as the last time
+   * someone thought to go and get it, and the screen said to fetch again
+   * without offering a way to.
+   *
+   * So it refreshes on its own: when the app opens, when it comes back to the
+   * foreground, and when the network returns. Each of those is a moment when
+   * a fresh figure is both wanted and possible. refreshIfStale does nothing
+   * when no place has been chosen, when the held reading is still fresh, or
+   * when the browser knows it is offline, so these are cheap to call.
+   */
+  onConditions(() => {
+    // Home draws the sun and air tiles from the stored reading, so it needs
+    // rebuilding. The sun screen redraws itself off the same result and is
+    // left alone here rather than being rebuilt underneath its own update.
+    if ((location.hash || ROOT) === ROOT) render({ quiet: true });
+  });
+
+  refreshIfStale();
+  window.addEventListener('online', () => refreshIfStale());
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) refreshIfStale();
+  });
   if (!location.hash) {
     // First run lands on setup; every run after it lands on Home.
     const done = JSON.parse(localStorage.getItem('vitals.settings') || '{}').setupDone;

@@ -1,12 +1,12 @@
 /* Outside: UV, sun protection, and air.
  *
- * Fetches on request and works without. Every figure can be entered by hand,
- * and the guidance is identical either way.
+ * Opens on the stored reading and refreshes behind it. Every figure can be
+ * entered by hand, and the guidance is identical either way.
  */
 
 import { el, eyebrow, fieldLabel, panel, button, row, rows, segmented } from '../app/ui.js';
-import { savedPlace, savePlace, fetchConditions, lastConditions, sunAdvice, airAdvice,
-         uvBand, SKIN_TYPES, locate } from '../app/weather.js';
+import { savedPlace, savePlace, fetchConditions, lastConditions, refreshIfStale,
+         onConditions, sunAdvice, airAdvice, uvBand, SKIN_TYPES, locate } from '../app/weather.js';
 import { findPlaces } from '../data/places.js';
 import { profile } from '../app/store.js';
 
@@ -35,8 +35,18 @@ export function renderOutside(screen, { go, live }) {
 
     if (place) {
       const chosen = el('div', 'placebar');
+      /* Refreshing happens on its own, but asking for it is a reasonable
+         thing to want, and until this was here the only way to force one was
+         to change the place and change it back. */
+      const again = button('Fetch now', 'chipbtn', async () => {
+        status = 'loading';
+        draw();
+        status = await fetchConditions(place, { force: true });
+        draw();
+      });
       chosen.append(
         el('span', 'placebar__name', `${place.city}, ${place.country}`),
+        again,
         button('Change', 'chipbtn', () => { savePlace(null); status = null; draw(); }),
       );
       screen.appendChild(chosen);
@@ -118,14 +128,20 @@ export function renderOutside(screen, { go, live }) {
       const err = panel(eyebrow('Could not fetch'), el('p', null, status.error));
       err.dataset.severity = 'soon';
       screen.appendChild(err);
-    } else if (status?.source === 'cache' && !status.stale) {
-      const note = el('p', 'hint',
-        `Last read at ${new Date(status.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}. `
-        + 'Fetch again for the current figure.');
+    } else if (status?.source === 'cache') {
+      /* Says what it has and how old it is, and never tells anyone to fetch
+         again: it is already refreshing on its own, and the one case where
+         that cannot work is the one where the instruction is useless. */
+      const at = new Date(status.at)
+        .toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const offline = typeof navigator !== 'undefined' && navigator.onLine === false;
+      const note = el('p', 'hint', !status.stale
+        ? `Read at ${at}.`
+        : offline
+          ? `Showing the reading from ${at}. No network, so this is the most `
+            + 'recent one on this device. It updates on its own once you are back online.'
+          : `Showing the reading from ${at} while a current one is fetched.`);
       screen.appendChild(note);
-    } else if (status?.stale) {
-      screen.appendChild(el('p', 'hint',
-        `Showing the last reading, from ${new Date(status.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}. Fetch again for the current figure.`));
     }
 
     if (uv != null) {
@@ -262,12 +278,32 @@ export function renderOutside(screen, { go, live }) {
         + 'about a kilometre, to a public weather service. Nothing else. No '
         + 'account, no key, no identifier, and nothing about your health.'),
       el('p', null,
-        'Everything on this screen works without it. The fetch is a '
-        + 'convenience, not a requirement.'),
+        'Once a place is set, the reading refreshes on its own when you open '
+        + 'the app and when the network comes back, so the figure is not older '
+        + 'than the last time you thought to ask for one. Removing the place '
+        + 'stops that, and everything here still works from typed values.'),
     );
     net.style.marginBlockStart = 'var(--s-5)';
     screen.appendChild(net);
   };
 
   draw();
+
+  /* Held data is on screen already, so a refresh runs behind it and only
+     redraws if it lands with something newer.
+
+     Subscribing rather than acting on one result: the shell also refreshes
+     when the network returns and when the app comes back to the foreground,
+     and those land long after this screen was built. Without this the screen
+     kept showing the old figure while the stored reading had already moved
+     on. Manual entries are left alone, since someone who typed a value meant
+     it and a fetch arriving is no reason to discard it. */
+  const stopListening = onConditions(({ data, at }) => {
+    if (!screen.isConnected) { stopListening(); return; }
+    if (manual.uv != null || manual.aqi != null) return;
+    status = { ok: true, data, at, source: 'cache' };
+    draw();
+  });
+
+  refreshIfStale();
 }

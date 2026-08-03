@@ -72,13 +72,68 @@ function cached() {
 
 /**
  * The last reading held on this device, without asking the network for
- * anything. Home reads this: a summary tile must never be the thing that
- * makes an outbound request.
+ * anything. Every screen draws from this, so nothing anyone looks at is
+ * waiting on a request.
  *
  * @returns {{ data: object, at: number, placeId: string, stale?: boolean } | null}
  */
 export function lastConditions() {
   return cached();
+}
+
+/* Screens redraw when a reading lands, rather than polling for one. */
+const conditionListeners = new Set();
+
+/** Called with the new record whenever a fetch replaces the stored reading. */
+export function onConditions(fn) {
+  conditionListeners.add(fn);
+  return () => conditionListeners.delete(fn);
+}
+
+/* One at a time. Home and the sun screen both ask on open, and without this
+   the second one starts a duplicate request for the same figure. */
+let inFlight = null;
+
+/**
+ * Bring the stored reading up to date, if that is worth doing and possible.
+ *
+ * Returns null without touching the network in the cases that should not
+ * cause a request at all: no place chosen yet, a reading that is still fresh,
+ * or a browser that already knows it is offline. So this is safe to call on
+ * every app open and every time the network comes back.
+ *
+ * Choosing a place is the consent. Nothing here runs until someone has, and
+ * nothing else is ever sent: the request carries a city coordinate rounded to
+ * two decimals and nothing about the person.
+ */
+export function refreshIfStale({ force = false } = {}) {
+  const place = savedPlace();
+  if (!place) return Promise.resolve(null);
+
+  const hit = cached();
+  if (!force && hit && hit.placeId === place.id && !hit.stale) {
+    return Promise.resolve(null);
+  }
+  // navigator.onLine is only reliable when it says false, which is the half
+  // worth acting on: it saves a request that cannot succeed.
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+    return Promise.resolve(null);
+  }
+  if (inFlight) return inFlight;
+
+  inFlight = fetchConditions(place, { force: true })
+    .then(res => {
+      if (res.ok && res.source === 'network') {
+        for (const fn of conditionListeners) {
+          try { fn({ data: res.data, at: res.at, placeId: place.id }); } catch {}
+        }
+      }
+      return res;
+    })
+    .catch(() => null)
+    .finally(() => { inFlight = null; });
+
+  return inFlight;
 }
 
 /**

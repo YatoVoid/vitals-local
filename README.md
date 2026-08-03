@@ -3,9 +3,14 @@
 A health reference and symptom triage app that runs entirely in the browser on
 your own device. No account, no server, no telemetry.
 
-Everything is stored locally. The app makes no outbound request except two you
-choose to make: fetching local UV and air quality, and downloading a
-translation model. Neither is required, and both can be left off.
+Everything is stored locally. Two things reach the network, both off until you
+turn them on: local UV and air quality, and downloading a translation model.
+Neither is required.
+
+Setting a place is what switches the first one on. After that the reading
+refreshes by itself when the app opens and when the network returns, since a
+figure nobody remembered to ask for is an old figure. Clearing the place stops
+it, and every screen still works from typed values.
 
 ## Running it
 

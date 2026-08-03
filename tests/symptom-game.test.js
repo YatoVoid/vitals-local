@@ -643,6 +643,65 @@ function walk(region, seed, script, limit = 12) {
     'sw.js precaches files that no longer exist');
 }
 
+/* ---- Refreshing the outside reading ----
+   This runs on every app open, so the cases where it must do nothing at all
+   matter more than the case where it fetches. A regression here turns a quiet
+   app into one that calls a weather service on every launch, including for
+   people who never asked for it. ---- */
+{
+  const bag = new Map();
+  globalThis.localStorage = {
+    getItem: k => (bag.has(k) ? bag.get(k) : null),
+    setItem: (k, v) => bag.set(k, String(v)),
+    removeItem: k => bag.delete(k),
+  };
+
+  let fetches = 0;
+  globalThis.fetch = () => { fetches++; return Promise.reject(new Error('no network in tests')); };
+  globalThis.AbortController = class { constructor() { this.signal = null; } abort() {} };
+
+  /* Node exposes navigator as a getter with no onLine, so it is replaced for
+     the duration rather than assigned to. */
+  const realNavigator = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
+  const fakeNavigator = { onLine: true };
+  Object.defineProperty(globalThis, 'navigator',
+    { value: fakeNavigator, configurable: true, writable: true });
+
+  const w = await import('../src/app/weather.js');
+  const PLACE = { id: 'x', city: 'X', country: 'Y', lat: 1, lon: 2 };
+  const store = (ageMs, placeId = 'x') => bag.set('vitals.weather', JSON.stringify(
+    { at: Date.now() - ageMs, placeId, data: { uv: 3 } }));
+
+  // No place chosen: nothing has been consented to, so nothing is sent.
+  bag.delete('vitals.place');
+  store(5 * 60 * 60 * 1000);
+  await w.refreshIfStale();
+  assert.equal(fetches, 0, 'no place chosen means no request');
+
+  // Place chosen but the held reading is still fresh.
+  bag.set('vitals.place', JSON.stringify(PLACE));
+  store(60 * 1000);
+  await w.refreshIfStale();
+  assert.equal(fetches, 0, 'a fresh reading is not refetched');
+
+  // Offline. The browser already knows this cannot work.
+  store(5 * 60 * 60 * 1000);
+  fakeNavigator.onLine = false;
+  await w.refreshIfStale();
+  assert.equal(fetches, 0, 'nothing is attempted while offline');
+
+  // Stale, online, place set: the one case that should reach the network.
+  fakeNavigator.onLine = true;
+  await w.refreshIfStale();
+  assert.ok(fetches > 0, 'a stale reading is refreshed');
+
+  delete globalThis.localStorage;
+  delete globalThis.fetch;
+  delete globalThis.AbortController;
+  if (realNavigator) Object.defineProperty(globalThis, 'navigator', realNavigator);
+  else delete globalThis.navigator;
+}
+
 /* ---- Pain chart geometry ----
    Readings logged minutes apart divide down to the same x and stack into one
    column at the edge, which is what every episode looks like on day one. ---- */

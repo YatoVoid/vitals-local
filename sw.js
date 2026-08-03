@@ -21,7 +21,7 @@
  * cache.
  */
 
-const VERSION = 'vitals-7';
+const VERSION = 'vitals-8';
 
 /* Everything needed to start with no network. Paths are relative so this works
    from a project subpath as well as a domain root. */
