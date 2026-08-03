@@ -281,7 +281,15 @@ export const HEAD = {
       id: 'q.age-new',
       screening: true,
       order: 6,
-      prompt: 'A new kind of headache after 50?',
+      /* The age half of this is on the profile, so it is not asked again.
+         Under fifty the question is not put at all, and where the age is
+         known the wording drops the part the app can already answer. It is
+         still asked when no age has been entered, and there the age has to
+         stay in the wording, since the answer is what carries it. */
+      needs: { minAge: 50 },
+      prompt: s => (s.profile?.age != null
+        ? 'Is this a new kind of headache for you?'
+        : 'A new kind of headache, and are you over 50?'),
       options: [
         { id: 'yes', label: 'Yes', lr: { serious: 5, tension: 0.6 } },
         { id: 'no', label: 'No', lr: { serious: 0.7 } },

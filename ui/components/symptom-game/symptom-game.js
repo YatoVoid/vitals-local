@@ -15,6 +15,7 @@ import { enableDragScroll } from '../../../src/app/ui.js';
 import { emergencyLine } from '../../../src/data/emergency.js';
 import { savedPlace } from '../../../src/app/weather.js';
 import { settings } from '../../../src/app/store.js';
+import { promptFor } from '../../../src/triage/engine.js';
 
 /* The country setting names a labelling region rather than a place. Only the
    ones that are a single country can point at an emergency number; "Europe,
@@ -399,7 +400,7 @@ export function mount(root) {
     if (!q) { dispatch({ type: 'advance' }); return; }
 
     const n = state.triage.asked.length + 1;
-    header(panel, `${labelFor(state.region)} · question ${n}`, q.prompt);
+    header(panel, `${labelFor(state.region)} · question ${n}`, promptFor(q, state.triage));
 
     const list = el('div', 'choices');
     q.options.forEach(o => {
@@ -446,7 +447,7 @@ export function mount(root) {
       header(panel, labelFor(state.region), o.headline);
       o.questions.forEach(q => {
         const box = el('div', 'card');
-        box.appendChild(el('h3', 'card__head', q.prompt));
+        box.appendChild(el('h3', 'card__head', promptFor(q, state.triage)));
         const row = el('div', 'choices choices--row');
         q.options.forEach(opt => {
           const b = el('button', 'choice', opt);

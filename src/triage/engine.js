@@ -34,6 +34,11 @@ export function startSession(bank, seed) {
     region: seed.region,
     painTypes: seed.painTypes ?? [],
     intensity: seed.intensity ?? null,
+    /* Age and sex, so a question the profile already answers is not put to
+       anyone again. Asking a man whether the pain tracks with his cycle, or
+       asking a thirty year old about headaches after fifty, reads as an app
+       that did not look at what it was told. */
+    profile: seed.profile ?? {},
     answers: {},        // questionId -> optionId
     asked: [],          // questionId order, for back navigation
     /* Questions the person declined to answer. Held apart from `answers`
@@ -92,6 +97,18 @@ function matches(rule, session) {
   }
   if (rule.painAny && !rule.painAny.some(p => session.painTypes.includes(p))) return false;
   if (rule.minIntensity != null && (session.intensity ?? 0) < rule.minIntensity) return false;
+
+  /* Profile clauses. A value nobody has entered passes rather than blocks:
+     not knowing someone's age is a reason to ask them a question, never a
+     reason to withhold a red flag. */
+  const p = session.profile ?? {};
+  if (rule.minAge != null && p.age != null && p.age < rule.minAge) return false;
+  if (rule.maxAge != null && p.age != null && p.age > rule.maxAge) return false;
+  /* Named as who it does not apply to rather than who it does. The profile
+     offers Other and Skip alongside Female and Male, and neither of those
+     tells you a question about periods is irrelevant, so only a value that
+     positively rules it out is allowed to. */
+  if (rule.sexNot && p.sex && rule.sexNot.includes(p.sex)) return false;
   return true;
 }
 
@@ -118,6 +135,20 @@ function separation(question, session, bank) {
     best = Math.max(best, hi - lo);
   }
   return best;
+}
+
+/**
+ * The wording to put on screen.
+ *
+ * A prompt may be written as a function of the session where the profile
+ * changes how it should read. Plain strings stay plain strings, and the
+ * result is ordinary text in the DOM either way, so the translator reaches it
+ * the same as any other.
+ */
+export function promptFor(question, session) {
+  return typeof question.prompt === 'function'
+    ? question.prompt(session)
+    : question.prompt;
 }
 
 /** Is this question worth asking given what is already known? */

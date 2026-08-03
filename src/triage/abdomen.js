@@ -290,6 +290,11 @@ export const ABDOMEN = {
     },
     {
       id: 'q.cycle',
+      /* Not put to anyone whose profile rules it out. Written as who it does
+         not apply to, so Other and Skip are still asked: neither of those
+         says a question about periods is irrelevant. The third option below
+         stays for exactly that reason. */
+      needs: { sexNot: ['Male'] },
       prompt: 'Does it track with your cycle?',
       options: [
         { id: 'yes', label: 'Yes', lr: { gynae: 8, appendicitis: 0.5 } },

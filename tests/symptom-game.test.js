@@ -753,6 +753,70 @@ function walk(region, seed, script, limit = 12) {
   delete globalThis.document;
 }
 
+/* ---- The profile is not asked for twice ----
+   Anything already on the profile must not come back as a question. Asking a
+   man whether the pain tracks with his cycle, or asking a thirty year old
+   about headaches after fifty, reads as an app that did not look. ---- */
+{
+  const { promptFor } = await import('../src/triage/engine.js');
+  const head = BANKS.find(b => b.id === 'head');
+  const abdo = BANKS.find(b => b.id === 'abdomen');
+
+  const askedIds = (bank, profileFields) => {
+    let s = startSession(bank, {
+      region: bank.regions[0], painTypes: [], intensity: 5, profile: profileFields,
+    });
+    const seen = [];
+    for (let i = 0; i < 14; i++) {
+      const q = nextQuestion(s, bank);
+      if (!q) break;
+      seen.push(q.id);
+      s = answer(s, bank, q.id, q.options[q.options.length - 1].id);
+      if (s.redFlag) break;
+    }
+    return seen;
+  };
+
+  assert.ok(!askedIds(head, { age: 30 }).includes('q.age-new'),
+    'a thirty year old is not asked about headaches after fifty');
+  assert.ok(askedIds(head, { age: 62 }).includes('q.age-new'),
+    'someone over fifty still gets the question');
+  assert.ok(askedIds(head, {}).includes('q.age-new'),
+    'an unknown age is a reason to ask, never a reason to skip');
+
+  // The wording drops the half the profile already answers.
+  const q = head.questions.find(x => x.id === 'q.age-new');
+  assert.equal(promptFor(q, { profile: { age: 62 } }),
+    'Is this a new kind of headache for you?');
+  assert.match(promptFor(q, { profile: {} }), /over 50/,
+    'with no age on file the question has to carry it');
+
+  assert.ok(!askedIds(abdo, { sex: 'Male' }).includes('q.cycle'),
+    'a man is not asked whether the pain tracks with his cycle');
+  assert.ok(askedIds(abdo, { sex: 'Female' }).includes('q.cycle'),
+    'and a woman still is');
+  /* The profile offers four values, not two. Other and Skip say nothing
+     about whether someone menstruates, so the question stays. */
+  for (const sex of ['Other', 'Skip', undefined]) {
+    assert.ok(askedIds(abdo, { sex }).includes('q.cycle'),
+      `sex "${sex}" does not rule the question out, so it is still asked`);
+  }
+
+  /* The flag has to survive the gating. A sixty year old with a new headache
+     is the case the question exists for. */
+  let s62 = startSession(head, {
+    region: 'head.face', painTypes: [], intensity: 5, profile: { age: 62 },
+  });
+  s62 = answer(s62, head, 'q.age-new', 'yes');
+  assert.equal(s62.redFlag?.trigger_id ?? s62.redFlag?.id, 'rf.head.new-over-50',
+    'a new headache after fifty is still flagged');
+
+  /* Not knowing must never withhold a flag. */
+  let sUnknown = startSession(head, { region: 'head.face', painTypes: [], intensity: 5 });
+  sUnknown = answer(sUnknown, head, 'q.age-new', 'yes');
+  assert.ok(sUnknown.redFlag, 'an unknown age still reaches the flag');
+}
+
 /* ---- Nothing stray is committed ----
    A shell redirect inside a quoted command writes a file named after whatever
    followed the bracket, and `git add -A` then commits it. They are empty, they

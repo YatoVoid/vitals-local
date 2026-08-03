@@ -20,8 +20,17 @@
  */
 
 import { bankFor } from '../../../src/triage/index.js';
+import { profile } from '../../../src/app/store.js';
 import { startSession, nextQuestion, answer as answerQuestion, stepBack, resolve as resolveTriage,
          progress as triageProgress, hasMoreQuestions, skipQuestion } from '../../../src/triage/engine.js';
+
+/* Only the two fields the question banks read. Passing the whole profile
+   would put a weight and a sleep figure into a symptom session that has no
+   use for either, and into the record it saves. */
+const triageProfile = () => {
+  const { age, sex } = profile.get();
+  return { age, sex };
+};
 
 export const STATES = {
   BODY_SELECT: 'BODY_SELECT',
@@ -176,6 +185,7 @@ function advance(s) {
       const bank = bankFor(s.region);
       const triage = startSession(bank, {
         region: s.region, painTypes: s.painTypes, intensity: s.intensity,
+        profile: triageProfile(),
       });
       const question = nextQuestion(triage, bank);
       if (!question) return resolve({ ...s, bank, triage });
@@ -231,6 +241,7 @@ export function resolve(s) {
   const bank = s.bank ?? bankFor(s.region);
   const triage = s.triage ?? startSession(bank, {
     region: s.region, painTypes: s.painTypes, intensity: s.intensity,
+    profile: triageProfile(),
   });
   const outcome = resolveTriage(triage, bank);
   outcome.moreQuestions = hasMoreQuestions(triage, bank);
