@@ -817,6 +817,60 @@ function walk(region, seed, script, limit = 12) {
   assert.ok(sUnknown.redFlag, 'an unknown age still reaches the flag');
 }
 
+/* ---- A red flag has to be reachable ----
+   A rule whose input is never collected cannot fire, and nothing about it
+   looks broken: it is written, reviewed and covered by its own test. Nine of
+   them had accumulated that way before this ran. ---- */
+{
+  let seed = 20260804;
+  const rnd = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+  const unreachable = [];
+
+  for (const bank of BANKS) {
+    const inputs = new Set();
+    for (const f of bank.redFlags) {
+      for (const qid of Object.keys({ ...(f.answers ?? {}), ...(f.anyAnswer ?? {}) })) {
+        inputs.add(qid);
+      }
+    }
+
+    const missed = new Map();
+    let scored = 0;
+    for (let i = 0; i < 600; i++) {
+      let s = startSession(bank, {
+        region: bank.regions[0], painTypes: [], intensity: 5, profile: {},
+      });
+      let q;
+      while ((q = nextQuestion(s, bank))) {
+        s = answer(s, bank, q.id, q.options[Math.floor(rnd() * q.options.length)].id);
+        if (s.redFlag) break;
+      }
+      if (s.redFlag) continue;   // a flag fired, nothing was missed
+      scored++;
+
+      const askedSet = new Set(s.asked);
+      for (const qid of inputs) {
+        if (askedSet.has(qid)) continue;
+        const question = bank.questions.find(x => x.id === qid);
+        // A question gated behind an answer nobody gave was never askable.
+        if (question?.needs) {
+          const gate = { ...(question.needs.answers ?? {}), ...(question.needs.anyAnswer ?? {}) };
+          const open = Object.entries(gate).some(([gq, want]) =>
+            (Array.isArray(want) ? want : [want]).includes(s.answers[gq]));
+          if (!open) continue;
+        }
+        missed.set(qid, (missed.get(qid) ?? 0) + 1);
+      }
+    }
+    for (const [qid, n] of missed) {
+      unreachable.push(`${bank.id}/${qid} unasked in ${Math.round(100 * n / scored)}% of sessions`);
+    }
+  }
+
+  assert.deepEqual(unreachable, [],
+    'a red flag depends on a question the engine may never get around to asking');
+}
+
 /* ---- Nothing stray is committed ----
    A shell redirect inside a quoted command writes a file named after whatever
    followed the bracket, and `git add -A` then commits it. They are empty, they

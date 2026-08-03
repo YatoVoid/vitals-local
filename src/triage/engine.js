@@ -120,21 +120,57 @@ export function checkRedFlags(session, bank) {
   return null;
 }
 
+const entropy = ps => {
+  let h = 0;
+  for (const x of ps) if (x > 0) h -= x * Math.log2(x);
+  return h;
+};
+
 /**
- * How much a question would separate the candidates still in contention.
- * Options that push the leaders in the same direction score zero.
+ * How much a question is expected to narrow things down, in bits.
+ *
+ * The measure that replaced a cruder one. Before, a question scored on the
+ * single option that spread the leaders furthest apart, across the top five
+ * candidates only. That rewarded a question with one very telling answer
+ * nobody was likely to give, ignored how probable each answer was, and could
+ * not see a question that ruled out four unlikely causes at once.
+ *
+ * This is the expected drop in entropy over the whole field: for each answer,
+ * how likely it is and how much doubt would be left after it, weighted
+ * together. A question worth asking is one whose answer is hard to predict
+ * and changes the ranking whichever way it goes.
+ *
+ * Likelihood ratios are read as relative likelihoods and normalised per
+ * candidate across the options, which is what lets a ratio stand in for
+ * P(answer given cause) without a second set of numbers to maintain.
  */
-function separation(question, session, bank) {
-  const top = ranked(session, bank).slice(0, 5);
-  if (top.length < 2) return 0;
-  let best = 0;
-  for (const opt of question.options) {
-    if (!opt.lr) continue;
-    const vals = top.map(c => Math.log(opt.lr[c.id] ?? 1));
-    const hi = Math.max(...vals), lo = Math.min(...vals);
-    best = Math.max(best, hi - lo);
+function infoGain(question, session, bank) {
+  const order = ranked(session, bank);
+  if (order.length < 2) return 0;
+
+  const ids = order.map(c => c.id);
+  const prior = order.map(c => c.score);
+  const before = entropy(prior);
+  if (before <= 0) return 0;
+
+  const opts = question.options;
+  // cond[optionIndex][causeIndex] = P(option | cause)
+  const cond = opts.map(o => ids.map(id => Math.max(o.lr?.[id] ?? 1, 1e-3)));
+  for (let ci = 0; ci < ids.length; ci++) {
+    let sum = 0;
+    for (let oi = 0; oi < opts.length; oi++) sum += cond[oi][ci];
+    if (sum <= 0) continue;
+    for (let oi = 0; oi < opts.length; oi++) cond[oi][ci] /= sum;
   }
-  return best;
+
+  let after = 0;
+  for (let oi = 0; oi < opts.length; oi++) {
+    const joint = prior.map((pc, ci) => pc * cond[oi][ci]);
+    const pOption = joint.reduce((a, b) => a + b, 0);
+    if (pOption <= 1e-9) continue;
+    after += pOption * entropy(joint.map(j => j / pOption));
+  }
+  return Math.max(0, before - after);
 }
 
 /**
@@ -184,7 +220,25 @@ export function nextQuestion(session, bank, { force = false } = {}) {
   const screening = pool.filter(q => q.screening).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
   if (screening.length) return screening[0];
 
-  if (session.asked.length >= (bank.maxQuestions ?? 9)) return null;
+  const budget = bank.maxQuestions ?? 9;
+  if (session.asked.length >= budget) return null;
+
+  /* The last slots belong to whatever a red flag still needs.
+   *
+   * A question that only feeds a flag rarely separates the leading causes, so
+   * it loses every comparison against a question that does, and the budget
+   * runs out before it is ever reached. Measured over the banks, the calf
+   * swelling question behind the lung clot flag went unasked in four
+   * sessions out of five, which leaves the rule written, tested, and unable
+   * to fire.
+   *
+   * Free choice keeps the early slots, where it is worth most. Once only as
+   * many questions remain as there are outstanding flag inputs, those take
+   * the rest. The gate below cannot end the session while any are pending. */
+  const pending = pendingFlagInputs(session, bank, pool);
+  if (pending.length && budget - session.asked.length <= pending.length) {
+    return bestBy(pending, session, bank);
+  }
 
   /* Screening questions rule things out but rarely separate the leaders.
      Applying the confidence gate before any discriminating question has been
@@ -195,18 +249,43 @@ export function nextQuestion(session, bank, { force = false } = {}) {
   /* `force` comes from the result screen asking for more questions. The
      confidence gate lifts; the hard cap does not. */
   const top = ranked(session, bank);
-  if (!force && discriminating >= 3 && top.length > 1
+  if (!force && !pending.length && discriminating >= 3 && top.length > 1
       && top[0].score > 0.40 && top[0].score - top[1].score > 0.18) {
     return null;
   }
 
-  const scored = pool
-    .map(q => ({ q, s: separation(q, session, bank) }))
-    .sort((a, b) => b.s - a.s);
-  if (!scored.length) return null;
-  // Nothing discriminating left. Under force, ask the best remaining anyway.
-  if (!force && scored[0].s < 0.15) return null;
-  return scored[0].q;
+  const best = bestBy(pool, session, bank);
+  /* Nothing left worth asking. A tenth of a bit is about the point where an
+     answer stops changing the ordering. Under force, ask the best remaining
+     anyway, and never stop while a flag is still waiting on an answer. */
+  if (!force && !pending.length && infoGain(best, session, bank) < 0.06) return null;
+  return best;
+}
+
+/** The question expected to narrow things down most, of those given. */
+function bestBy(questions, session, bank) {
+  let best = questions[0], bestScore = -1;
+  for (const q of questions) {
+    const s = infoGain(q, session, bank);
+    if (s > bestScore) { bestScore = s; best = q; }
+  }
+  return best;
+}
+
+/**
+ * Questions a red flag depends on that nobody has answered yet.
+ *
+ * Only those still worth asking: one gated behind an answer that was never
+ * given, or ruled out by the profile, is not pending, it is inapplicable.
+ */
+function pendingFlagInputs(session, bank, pool) {
+  const needed = new Set();
+  for (const f of bank.redFlags) {
+    for (const qid of Object.keys({ ...(f.answers ?? {}), ...(f.anyAnswer ?? {}) })) {
+      if (session.answers[qid] == null) needed.add(qid);
+    }
+  }
+  return pool.filter(q => needed.has(q.id));
 }
 
 /** Record an answer and fold it into the candidate scores. */
