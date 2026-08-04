@@ -118,21 +118,42 @@
    than wrapping onto a row sized for something else. */
 .inline-form--pair { grid-template-columns: 1fr 5rem 5rem auto; }
 
+/* ---- Asking before removing ----
+   Sits in the row's own place rather than over the screen, so what is about
+   to go is still visible behind the question. Every value is a token, so the
+   three themes carry it without a rule each. */
+.removing__ask {
+  padding: var(--s-3) 0;
+  border-block-end: var(--hairline) solid var(--hair);
+}
+.removing__q {
+  margin: 0 0 var(--s-3);
+  color: var(--ink);
+}
+.removing__acts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s-2);
+}
+.removing__acts .btn { inline-size: 100%; }
+
 /* ---- Days of the week ----
-   Seven equal columns so the row reads as a week rather than as a list, and
-   still clears the tap target at 360px: 44px each needs 308, and seven of
-   1fr in the content column comes out above that. */
+   One joined strip rather than seven separate buttons. Spaced apart with the
+   smallest gap there is, each day came to 43px on a 360px screen, a pixel
+   under the tap target, which the audit caught in all three themes. Closing
+   the gaps gives every day 46px and reads more like a week besides. */
 .daypick {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: var(--s-1);
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   margin-block-end: var(--s-3);
 }
 .daypick__day {
   min-block-size: var(--tap);
   padding: 0;
   border: var(--hairline) solid var(--hair-edge);
-  border-radius: var(--r-sm);
+  /* Shared edges, so the seam between two days is one line and not two. */
+  border-inline-start-width: 0;
+  border-radius: 0;
   background: none;
   color: var(--ink-dim);
   font: inherit;
@@ -140,9 +161,17 @@
   cursor: pointer;
   transition: background var(--d-quick) var(--ease), color var(--d-quick) var(--ease);
 }
+.daypick__day:first-child {
+  border-inline-start-width: var(--hairline);
+  border-start-start-radius: var(--r-sm);
+  border-end-start-radius: var(--r-sm);
+}
+.daypick__day:last-child {
+  border-start-end-radius: var(--r-sm);
+  border-end-end-radius: var(--r-sm);
+}
 .daypick__day[aria-pressed="true"] {
   background: var(--accent-wash);
-  border-color: var(--accent);
   color: var(--ink);
 }
 

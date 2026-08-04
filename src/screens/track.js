@@ -4,7 +4,7 @@
  * a black box, and nothing here produces a dose.
  */
 
-import { el, eyebrow, fieldLabel, panel, button, row, rows, ring, segmented, removableRow, numberOrNull } from '../app/ui.js';
+import { el, eyebrow, fieldLabel, panel, button, row, rows, ring, segmented, removableRow, numberOrNull, collapseAway, softUpdate } from '../app/ui.js';
 import { food, water, meds, labs, dosesTaken, summary, weekEnergy, profile } from '../app/store.js';
 import { compareIngredients, describeIngredient } from '../data/ingredients.js';
 import { open as openEpisodes } from '../app/episodes.js';
@@ -561,22 +561,57 @@ export function renderMeds(screen, { live }) {
     const list = meds.all();
     if (!list.length) return;
     screen.appendChild(el('h2', null, 'Your medicines'));
-    screen.appendChild(rows(...list.map(m => {
+
+    const group = rows(...list.map(m => {
+      /* A second tap asks rather than deletes. A medicine carries a schedule
+         somebody set up, so losing one to a stray tap costs more than losing
+         a glass of water, and the row gives no sign of what is about to go
+         until it has gone. */
+      const wrap = el('div', 'removing');
       const r = removableRow(m.name, {
         sub: describe(m),
         end: m.dose || '',
         confirm: 'Remove?',
-        onRemove: () => {
-          meds.remove(m.id);
-          live.textContent = `${m.name} removed`;
-          draw();
-        },
+        onRemove: () => ask(),
       });
       r.querySelector('span')?.setAttribute('translate', 'no');
-      return r;
-    })));
+      wrap.appendChild(r);
+
+      function ask() {
+        if (wrap.querySelector('.removing__ask')) return;
+        /* The row stays where it is, so what is about to go is still in front
+           of the person answering. It is only made untappable, which keeps its
+           colours rather than greying the name out. */
+        r.disabled = true;
+        const box = el('div', 'removing__ask');
+        /* One whole sentence, with no name spliced into it. Built from pieces
+           it reached the translator as fragments, and a fragment has none of
+           the context a sentence gives it. The name is on the row above. */
+        const q = el('p', 'removing__q', 'Remove this medicine and its schedule?');
+        const buttons = el('div', 'removing__acts');
+        const cancel = () => { box.remove(); r.disabled = false; };
+        buttons.append(
+          button('No', 'btn btn--quiet', cancel),
+          button('Yes, remove', 'btn btn--danger', () => {
+            live.textContent = `${m.name} removed`;
+            // The row closes its own gap, then the rest settles into it.
+            collapseAway(wrap, () => {
+              meds.remove(m.id);
+              softUpdate(draw);
+            });
+          }),
+        );
+        box.append(q, buttons);
+        wrap.appendChild(box);
+        box.querySelector('button')?.focus();
+      }
+
+      return wrap;
+    }));
+    screen.appendChild(group);
     screen.appendChild(el('p', 'hint', 'Tap one twice to remove it.'));
   }
+
 
   /* ---- Adding one ---- */
   function drawAdd() {

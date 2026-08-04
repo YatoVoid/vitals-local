@@ -899,6 +899,102 @@ function walk(region, seed, script, limit = 12) {
   delete globalThis.document;
 }
 
+/* ---- Removing a medicine asks first ----
+   A medicine carries a schedule somebody set up, so losing one to a stray tap
+   costs more than losing a glass of water. ---- */
+{
+  const handlers = new WeakMap();
+  const mk = tag => {
+    const n = {
+      tagName: String(tag).toUpperCase(), children: [], attrs: {}, style: {},
+      dataset: {}, _cls: '', _text: '', hidden: false, value: '',
+      set className(v) { this._cls = v; }, get className() { return this._cls; },
+      set textContent(v) { this._text = v; this.children = []; },
+      get textContent() {
+        return this.hidden ? '' : this._text + this.children.map(c => c.textContent).join(' ');
+      },
+      setAttribute(k, v) { this.attrs[k] = String(v); },
+      getAttribute(k) { return this.attrs[k] ?? null; },
+      removeAttribute(k) { delete this.attrs[k]; },
+      appendChild(c) { c._parent = this; this.children.push(c); return c; },
+      append(...cs) { cs.forEach(c => { c._parent = this; this.children.push(c); }); },
+      replaceChildren(...cs) { this.children = cs; },
+      remove() { const p = this._parent; if (p) p.children = p.children.filter(c => c !== this); },
+      addEventListener(t, fn) { const m = handlers.get(this) ?? {}; m[t] = fn; handlers.set(this, m); },
+      focus() {},
+      querySelector(sel) {
+        const want = sel.replace('.', '');
+        const found = [];
+        (function w(x) { (x.children ?? []).forEach(c => { found.push(c); w(c); }); })(this);
+        return found.find(c => c.tagName === sel.toUpperCase()
+          || String(c._cls).split(' ').includes(want)) ?? null;
+      },
+      querySelectorAll() { return []; },
+      getBoundingClientRect() { return { height: 60, width: 300, top: 0, left: 0 }; },
+    };
+    return n;
+  };
+  const bag = new Map();
+  globalThis.document = {
+    createElement: mk, createElementNS: mk,
+    createTextNode: t => ({ ...mk('#text'), textContent: String(t), setAttribute() {} }),
+    documentElement: { dataset: { motion: 'reduced' } },
+  };
+  globalThis.window = { matchMedia: () => ({ matches: true }) };
+  globalThis.requestAnimationFrame = fn => fn();
+  globalThis.localStorage = {
+    getItem: k => bag.get(k) ?? null, setItem: (k, v) => bag.set(k, String(v)),
+    removeItem: k => bag.delete(k), key: i => [...bag.keys()][i],
+    get length() { return bag.size; },
+  };
+  bag.set('vitals.settings', JSON.stringify({ setupDone: true, theme: 'kawaii' }));
+
+  const { meds } = await import('../src/app/store.js');
+  const { renderMeds } = await import('../src/screens/track.js');
+  meds.clear();
+  meds.add({ name: 'Metformin', times: ['08:00'], days: [0, 1, 2, 3, 4, 5, 6] });
+  meds.add({ name: 'Vitamin D', times: ['09:00'], days: [1] });
+
+  const screen = mk('section');
+  renderMeds(screen, { live: mk('p') });
+  const flat = r => { const o = []; (function w(n) { o.push(n); (n.children || []).forEach(w); })(r); return o; };
+  const txt = n => n.textContent.replace(/\s+/g, ' ').trim();
+  const click = n => handlers.get(n)?.click?.();
+  const find = (root, cls) => flat(root).find(n => String(n._cls).split(' ').includes(cls));
+
+  const wrap = flat(screen).find(n => n._cls === 'removing');
+  const theRow = wrap.children[0];
+  click(theRow);   // arms
+  click(theRow);   // asks rather than removing
+
+  assert.equal(meds.all().length, 2, 'the second tap asks instead of deleting');
+  const ask = find(wrap, 'removing__ask');
+  assert.ok(ask, 'a question appears in the row');
+  assert.match(txt(ask), /Remove this medicine and its schedule\?/);
+  const labels = flat(ask).filter(n => n.tagName === 'BUTTON').map(txt);
+  assert.deepEqual(labels, ['No', 'Yes, remove'], 'both answers are offered, No first');
+  assert.ok(theRow.disabled, 'the row stays visible so the name is still in front of them');
+  assert.ok(!/Metformin/.test(txt(ask)),
+    'the question is one whole sentence, since a name spliced in reaches the translator as fragments');
+
+  click(flat(ask).find(n => txt(n) === 'No'));
+  assert.equal(meds.all().length, 2, 'No keeps it');
+  assert.ok(!find(wrap, 'removing__ask'), 'and takes the question away');
+
+  click(theRow); click(theRow);
+  const again = find(wrap, 'removing__ask');
+  click(flat(again).find(n => txt(n) === 'Yes, remove'));
+  await new Promise(r => setTimeout(r, 30));
+  assert.deepEqual(meds.all().map(m => m.name), ['Vitamin D'],
+    'Yes removes the one that was asked about');
+
+  meds.clear();
+  delete globalThis.window;
+  delete globalThis.requestAnimationFrame;
+  delete globalThis.localStorage;
+  delete globalThis.document;
+}
+
 /* ---- Medicine schedules ----
    A missed dose is the failure that matters here, so the patterns people
    actually get given are pinned: every day, certain days, several times a

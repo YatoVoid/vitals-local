@@ -195,6 +195,60 @@ export function removableRow(label, { sub, end: endText = '', confirm = 'Remove?
   return r;
 }
 
+/** Is motion wanted, by the setting first and the system after it. */
+export function motionAllowed() {
+  const set = document.documentElement?.dataset?.motion;
+  if (set === 'reduced') return false;
+  if (set === 'full') return true;
+  return !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+}
+
+/**
+ * Redraw so that whatever is left slides into place.
+ *
+ * Removing the last entry takes a heading, a list and a hint out at once, and
+ * everything below jumps up the height of all three. A view transition asks
+ * the browser to tween between the two layouts, which is what makes it read
+ * as the page settling rather than blinking. Where the API is missing, or
+ * motion is turned down, the redraw happens on its own with nothing lost.
+ */
+export function softUpdate(redraw) {
+  if (!motionAllowed() || typeof document.startViewTransition !== 'function') {
+    redraw();
+    return;
+  }
+  document.startViewTransition(() => { redraw(); });
+}
+
+/**
+ * Take a node out with a collapse rather than a cut.
+ *
+ * Measured before it is animated, because a height of auto has nothing to
+ * tween from. Calls back once the space has actually closed, so a redraw
+ * lands after the gap has gone rather than fighting it.
+ */
+export function collapseAway(node, done) {
+  if (!node || !motionAllowed()) { done(); return; }
+  const h = node.getBoundingClientRect?.().height ?? 0;
+  if (!h) { done(); return; }
+
+  node.style.overflow = 'hidden';
+  node.style.blockSize = `${h}px`;
+  node.style.transition =
+    'block-size var(--d-settle) var(--ease), opacity var(--d-quick) var(--ease)';
+  // A frame at the measured height, so the change to zero is a transition.
+  requestAnimationFrame(() => {
+    node.style.blockSize = '0px';
+    node.style.opacity = '0';
+  });
+
+  let ran = false;
+  const finish = () => { if (ran) return; ran = true; done(); };
+  node.addEventListener('transitionend', finish, { once: true });
+  // A dropped transitionend must not leave the entry on screen forever.
+  setTimeout(finish, 500);
+}
+
 /**
  * A number from a text field, or null when the field is empty or not numeric.
  *
