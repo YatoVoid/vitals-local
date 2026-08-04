@@ -12,6 +12,13 @@ refreshes by itself when the app opens and when the network returns, since a
 figure nobody remembered to ask for is an old figure. Clearing the place stops
 it, and every screen still works from typed values.
 
+| | |
+|---|---|
+| ![Home, showing water, energy, sun and air](docs/media/home.png) | ![Food and energy, with the target worked out from the profile](docs/media/food.png) |
+| Today at a glance. Tiles are rearranged by holding one and dragging it. | Energy against a target built from your own height, weight, age and goal. |
+| ![A lab value placed inside its range](docs/media/labs.png) | ![The same screen in the blue neon theme](docs/media/neon.png) |
+| A value gets the band it falls in, not just whether it cleared the range. | Three themes. Same layout, same words, different surface. |
+
 ## Running it
 
 The app is built from ES modules, which browsers refuse to load over
@@ -137,6 +144,14 @@ Browser harnesses live in `tests/`:
   to catch it.
 - `i18n.html` audits translation coverage per language.
 - `fit.html` checks layout across viewport sizes.
+
+## Support
+
+Built by one person, given away with no ads, no tracking, no accounts and
+nothing to pay for. If it was useful, a tip helps keep the clinical content
+reviewed and up to date.
+
+<a href="https://buymeacoffee.com/walilambere" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy me a coffee" height="50"></a>
 
 ## Licence
 

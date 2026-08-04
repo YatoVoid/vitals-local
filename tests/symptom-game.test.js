@@ -506,6 +506,48 @@ function walk(region, seed, script, limit = 12) {
     ['water', 'energy', 'uv', 'air', 'symptoms', 'meds'],
     'the default arrangement is the one that was asked for');
 
+  /* Through the list the screen actually passes, not the default parameter.
+     The screen handed in the builder declaration order, so the arrangement
+     above was written, tested and never reached anybody's home screen. The
+     builders below are deliberately in the wrong order for that reason. */
+  const { availableTiles, renderHome } = await import('../src/screens/home.js');
+  const builders = { symptoms: 1, water: 1, energy: 1, meds: 1, uv: 1, air: 1 };
+  assert.deepEqual(resolveOrder(undefined, availableTiles(builders)), DEFAULT_ORDER,
+    'the arrangement survives the builder declaration order');
+  // A tile nobody has listed still appears rather than disappearing.
+  assert.deepEqual(availableTiles({ ...builders, sleep: 1 }).at(-1), 'sleep');
+
+  /* Drawn for real, because the helper being right did not stop the screen
+     passing its own list and getting a different arrangement. */
+  const node = () => ({
+    children: [], dataset: {}, style: {}, attrs: {}, _cls: '', _text: '',
+    set className(v) { this._cls = v; }, get className() { return this._cls; },
+    set textContent(v) { this._text = v; }, get textContent() { return this._text; },
+    setAttribute(k, v) { this.attrs[k] = v; }, removeAttribute() {},
+    appendChild(c) { this.children.push(c); return c; },
+    append(...cs) { this.children.push(...cs); },
+    replaceChildren(...cs) { this.children = cs; },
+    addEventListener() {}, querySelector() { return null; },
+    querySelectorAll() { return []; }, getBoundingClientRect() {
+      return { top: 0, left: 0, width: 0, height: 0 };
+    },
+  });
+  globalThis.document.createElement = node;
+  globalThis.document.createElementNS = node;   // the ring gauge is svg
+  globalThis.document.createTextNode = t => ({ ...node(), textContent: String(t) });
+  globalThis.requestAnimationFrame = fn => fn();
+
+  const screen = node();
+  renderHome(screen, { go() {}, live: node() });
+  const drawn = [];
+  (function walk(n) {
+    if (n.dataset?.tile) drawn.push(n.dataset.tile);
+    (n.children ?? []).forEach(walk);
+  })(screen);
+  assert.deepEqual(drawn, DEFAULT_ORDER,
+    'the home screen draws the arrangement that was asked for');
+  delete globalThis.requestAnimationFrame;
+
   assert.deepEqual(resolveOrder(undefined), DEFAULT_ORDER, 'no saved order gives the default');
   assert.deepEqual(resolveOrder(null), DEFAULT_ORDER);
   assert.deepEqual(resolveOrder('nonsense'), DEFAULT_ORDER, 'a damaged value falls back');

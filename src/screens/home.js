@@ -38,6 +38,25 @@ export const DEFAULT_ORDER = ['water', 'energy', 'uv', 'air', 'symptoms', 'meds'
  * @param {unknown} saved
  * @param {string[]} available
  */
+/**
+ * Every tile that exists, in the order it should appear before anyone moves
+ * anything.
+ *
+ * The arrangement was being read off the order the builders happen to be
+ * written in, which is not an arrangement anyone chose and quietly ignored
+ * DEFAULT_ORDER. A tile added to the builders but not listed there still
+ * appears, at the end, rather than vanishing.
+ *
+ * @param {object} builders tile id to builder function
+ */
+export function availableTiles(builders) {
+  const ids = Object.keys(builders);
+  return [
+    ...DEFAULT_ORDER.filter(id => ids.includes(id)),
+    ...ids.filter(id => !DEFAULT_ORDER.includes(id)),
+  ];
+}
+
 export function resolveOrder(saved, available = DEFAULT_ORDER) {
   const known = new Set(available);
   const wanted = Array.isArray(saved) && saved.length ? saved : available;
@@ -65,7 +84,7 @@ export function renderHome(screen, { go, live }) {
   screen.appendChild(quick);
 
   const builders = tileBuilders(s, go);
-  const order = resolveOrder(settings.get().homeOrder, Object.keys(builders));
+  const order = resolveOrder(settings.get().homeOrder, availableTiles(builders));
 
   const grid = el('div', 'grid2 grid2--arrangeable');
   grid.style.marginBlockStart = 'var(--s-5)';

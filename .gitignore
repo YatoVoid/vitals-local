@@ -13,6 +13,8 @@ scratch/
 # Screenshots and captures from local testing
 *.png
 *.webm
+# The ones in the readme are part of the repository
+!docs/media/*.png
 
 # Python
 __pycache__/
