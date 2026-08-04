@@ -118,6 +118,34 @@
    than wrapping onto a row sized for something else. */
 .inline-form--pair { grid-template-columns: 1fr 5rem 5rem auto; }
 
+/* ---- Days of the week ----
+   Seven equal columns so the row reads as a week rather than as a list, and
+   still clears the tap target at 360px: 44px each needs 308, and seven of
+   1fr in the content column comes out above that. */
+.daypick {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: var(--s-1);
+  margin-block-end: var(--s-3);
+}
+.daypick__day {
+  min-block-size: var(--tap);
+  padding: 0;
+  border: var(--hairline) solid var(--hair-edge);
+  border-radius: var(--r-sm);
+  background: none;
+  color: var(--ink-dim);
+  font: inherit;
+  font-size: var(--t-small);
+  cursor: pointer;
+  transition: background var(--d-quick) var(--ease), color var(--d-quick) var(--ease);
+}
+.daypick__day[aria-pressed="true"] {
+  background: var(--accent-wash);
+  border-color: var(--accent);
+  color: var(--ink);
+}
+
 /* A number with its unit underneath. Inside the box the word ran out of a
    narrow field, and a placeholder leaves as soon as anyone types, which is
    when it is most use. */

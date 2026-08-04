@@ -14,6 +14,8 @@
  * Nothing here talks to a network. There is no endpoint to talk to.
  */
 
+import { dueToday, nextDose } from './schedule.js';
+
 const NS = 'vitals';
 const key = name => `${NS}.${name}`;
 
@@ -176,6 +178,9 @@ export const food = logStore('food_log');
 export const water = logStore('water_log');
 export const meds = logStore('medications');
 export const labs = logStore('lab_results');
+/* Doses actually taken, one entry per dose, kept apart from the medicine
+   itself so a schedule can be edited without rewriting its history. */
+export const dosesTaken = logStore('doses_taken');
 
 export const profile = {
   get() { return read('profile', {}); },
@@ -295,6 +300,17 @@ export function referenceEnergy(p = profile.get()) {
 }
 
 
+/** What is outstanding today, and when the next dose falls. */
+export function medsToday(now = new Date()) {
+  const list = meds.all();
+  const day = dueToday(list, dosesTaken.all(), now);
+  const soonest = list
+    .map(m => nextDose(m, now))
+    .filter(Boolean)
+    .sort((a, b) => a.date - b.date || a.time.localeCompare(b.time))[0] ?? null;
+  return { count: list.length, ...day, next: soonest };
+}
+
 /** Counts for the home dashboard, computed on read rather than stored. */
 export function summary() {
   const w = water.today().reduce((n, r) => n + (r.ml ?? 0), 0);
@@ -308,7 +324,10 @@ export function summary() {
     // Absent on older entries, so it counts as none rather than breaking.
     proteinG: eaten.reduce((n, r) => n + (r.proteinG ?? 0), 0),
     lastSymptom: last ?? null,
-    medsDue: meds.all().filter(m => m.due).length,
+    /* From the schedule and what has actually been marked, rather than a
+       flag set when the medicine was added and never cleared, which counted
+       every medicine as due forever. */
+    meds: medsToday(),
   };
 }
 

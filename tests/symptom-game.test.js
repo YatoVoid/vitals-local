@@ -859,6 +859,115 @@ function walk(region, seed, script, limit = 12) {
   assert.ok(sUnknown.redFlag, 'an unknown age still reaches the flag');
 }
 
+/* ---- Tap twice to remove, on a touch screen ----
+   A finger lifting off the glass raises pointerleave, so the row disarmed
+   itself between the two taps and removing was impossible on a phone. ---- */
+{
+  const listeners = new Map();
+  const stub = () => ({
+    children: [], attrs: {}, dataset: {}, style: {}, _cls: '', _text: '',
+    set className(v) { this._cls = v; }, get className() { return this._cls; },
+    set textContent(v) { this._text = v; }, get textContent() { return this._text; },
+    setAttribute(k, v) { this.attrs[k] = v; }, removeAttribute(k) { delete this.attrs[k]; },
+    appendChild(c) { this.children.push(c); return c; },
+    append(...cs) { this.children.push(...cs); },
+    replaceChildren(...cs) { this.children = cs; },
+    addEventListener(t, fn) { listeners.set(t, fn); },
+    querySelector() { return { textContent: '' }; },
+  });
+  globalThis.document = { createElement: stub, createTextNode: t => stub() };
+
+  const { removableRow } = await import('../src/app/ui.js');
+  let removed = 0;
+  removableRow('Metformin', { end: '08:00', onRemove: () => { removed++; } });
+
+  const tap = () => listeners.get('click')();
+  const lift = kind => listeners.get('pointerleave')({ pointerType: kind });
+
+  tap();            // arms
+  lift('touch');    // the finger comes off the glass
+  tap();            // the second tap has to remove it
+  assert.equal(removed, 1, 'two taps remove the row on a touch screen');
+
+  // A mouse genuinely leaving the row still disarms, which is the point of it.
+  removed = 0;
+  tap();
+  lift('mouse');
+  tap();
+  assert.equal(removed, 0, 'moving a mouse away still cancels');
+
+  delete globalThis.document;
+}
+
+/* ---- Medicine schedules ----
+   A missed dose is the failure that matters here, so the patterns people
+   actually get given are pinned: every day, certain days, several times a
+   day, and several times a day on only some days. ---- */
+{
+  const { describe: describeSchedule, timesOn, nextDose, dueToday, dayKey, EVERY_DAY } =
+    await import('../src/app/schedule.js');
+
+  const at = (day, hh, mm = 0) => new Date(2026, 7, day, hh, mm);   // Aug 2026
+  // 2026-08-03 is a Monday, so day 3 + n gives a known weekday.
+  assert.equal(at(3, 9).getDay(), 1, 'the fixture starts on a Monday');
+
+  const daily = { id: 'd', name: 'A', times: ['08:00', '20:00'], days: EVERY_DAY };
+  const weekly = { id: 'w', name: 'B', times: ['09:00'], days: [1] };
+  const someDays = { id: 's', name: 'C', times: ['08:00', '14:00', '20:00'], days: [2, 5] };
+
+  assert.deepEqual(timesOn(daily, at(3, 9)), ['08:00', '20:00']);
+  assert.deepEqual(timesOn(weekly, at(3, 9)), ['09:00'], 'Monday is its day');
+  assert.deepEqual(timesOn(weekly, at(4, 9)), [], 'Tuesday is not');
+  assert.deepEqual(timesOn(someDays, at(4, 9)), ['08:00', '14:00', '20:00'],
+    'three times a day, on the days it applies');
+  assert.deepEqual(timesOn(someDays, at(3, 9)), [], 'and nothing on the days it does not');
+
+  // Times are held in order however they were entered.
+  assert.deepEqual(timesOn({ times: ['20:00', '08:00'] }, at(3, 9)), ['08:00', '20:00']);
+  // No days recorded means every day, so an older entry keeps working.
+  assert.deepEqual(timesOn({ times: ['08:00'] }, at(5, 9)), ['08:00']);
+
+  const n1 = nextDose(daily, at(3, 9));
+  assert.equal(n1.time, '20:00', 'later the same day');
+  assert.equal(n1.today, true);
+  const n2 = nextDose(daily, at(3, 21));
+  assert.equal(n2.time, '08:00', 'past the last one, so tomorrow');
+  assert.equal(n2.today, false);
+  const n3 = nextDose(weekly, at(3, 10));
+  assert.equal(n3.date.getDay(), 1, 'a weekly dose rolls to the next Monday');
+  assert.equal(nextDose({ times: [] }), null, 'no times means no next dose');
+
+  assert.equal(describeSchedule(daily), 'Every day, 2 times: 08:00, 20:00');
+  assert.equal(describeSchedule(weekly), 'Mondays at 09:00');
+  assert.equal(describeSchedule({ times: ['08:00'], days: [1, 2, 3, 4, 5] }),
+    'Weekdays at 08:00');
+  assert.equal(describeSchedule({ times: ['08:00'], days: EVERY_DAY }),
+    'Every day at 08:00');
+  assert.equal(describeSchedule({ times: ['08:00'], days: [2, 5] }),
+    'Tue, Fri at 08:00');
+  assert.equal(describeSchedule({ times: [] }), 'No time set');
+
+  /* Outstanding counts what has not been marked. Nothing is assumed taken
+     just because its time went by. */
+  const now = at(4, 15);   // Tuesday afternoon
+  const empty = dueToday([daily, someDays], [], now);
+  assert.equal(empty.total, 5, 'two daily doses plus three on a Tuesday');
+  assert.equal(empty.outstanding, 5, 'an unmarked dose stays outstanding');
+  assert.equal(empty.late, 3, '08:00 twice and 14:00 have passed by three in the afternoon');
+
+  const marked = dueToday([daily, someDays], [
+    { medId: 'd', day: dayKey(now), time: '08:00' },
+    { medId: 's', day: dayKey(now), time: '08:00' },
+  ], now);
+  assert.equal(marked.taken, 2);
+  assert.equal(marked.outstanding, 3);
+  assert.equal(marked.late, 1, 'only 14:00 is still late');
+
+  // Yesterday's marks must not clear today's doses.
+  const stale = dueToday([daily], [{ medId: 'd', day: '2026-08-03', time: '08:00' }], now);
+  assert.equal(stale.taken, 0, 'a dose marked yesterday does not count for today');
+}
+
 /* ---- A red flag has to be reachable ----
    A rule whose input is never collected cannot fire, and nothing about it
    looks broken: it is written, reviewed and covered by its own test. Nine of

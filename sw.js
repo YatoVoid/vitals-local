@@ -21,7 +21,7 @@
  * cache.
  */
 
-const VERSION = 'vitals-14';
+const VERSION = 'vitals-15';
 
 /* Everything needed to start with no network. Paths are relative so this works
    from a project subpath as well as a domain root. */
@@ -41,6 +41,7 @@ const SHELL = [
   './src/app/body-metrics.js',
   './src/app/episodes.js',
   './src/app/weather.js',
+  './src/app/schedule.js',
   './src/data/ingredients.js',
   './src/data/emergency.js',
   './src/data/labs.js',

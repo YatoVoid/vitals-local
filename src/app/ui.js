@@ -170,7 +170,13 @@ export function removableRow(label, { sub, end: endText = '', confirm = 'Remove?
   };
 
   r.addEventListener('click', () => {
-    if (armed) { onRemove(); return; }
+    if (armed) {
+      // Disarmed before the callback, so a row left on screen is not still
+      // primed to remove whatever takes its place.
+      disarm();
+      onRemove();
+      return;
+    }
     armed = true;
     r.dataset.armed = '1';
     if (end) end.textContent = confirm;
@@ -179,7 +185,13 @@ export function removableRow(label, { sub, end: endText = '', confirm = 'Remove?
     timer = setTimeout(disarm, 4000);
   });
   r.addEventListener('blur', disarm);
-  r.addEventListener('pointerleave', disarm);
+  /* Only a mouse can meaningfully leave a row. A finger lifting off the glass
+     raises pointerleave as well, so on a phone the row disarmed itself between
+     the two taps and the second tap simply armed it again. Tap twice to remove
+     could not work on a touch screen at all. */
+  r.addEventListener('pointerleave', ev => {
+    if (ev.pointerType === 'mouse' || ev.pointerType === undefined) disarm();
+  });
   return r;
 }
 

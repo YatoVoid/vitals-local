@@ -5,12 +5,13 @@
  */
 
 import { el, eyebrow, fieldLabel, panel, button, row, rows, ring, segmented, removableRow, numberOrNull } from '../app/ui.js';
-import { food, water, meds, labs, summary, weekEnergy, profile } from '../app/store.js';
+import { food, water, meds, labs, dosesTaken, summary, weekEnergy, profile } from '../app/store.js';
 import { compareIngredients, describeIngredient } from '../data/ingredients.js';
 import { open as openEpisodes } from '../app/episodes.js';
 import { MARKERS, assess, RANGE_NOTE } from '../data/labs.js';
 import { energy as showEnergy, energyUnit, storeEnergy } from '../app/units.js';
 import { dailyEnergy, dailyProtein, currentGoal } from '../app/body-metrics.js';
+import { DAYS, EVERY_DAY, describe, dueToday, nextDose, dayKey } from '../app/schedule.js';
 
 /* "gl" is not an abbreviation anyone uses, and it read as a word cut off
    halfway. The row has room for the whole word. */
@@ -29,12 +30,21 @@ export function renderTrackIndex(screen, { go }) {
   screen.appendChild(rows(
     row('Food and energy', { end: `${showEnergy(s.kcal)} ${energyUnit()}`, sub: `Target ${showEnergy(goalKcal)}`, onClick: () => go('#/track/diet') }),
     row('Water', { end: glassCount(s.waterMl), sub: `Target ${Math.round(s.waterGoalMl / 250)} glasses`, onClick: () => go('#/track/hydration') }),
-    row('Medicines', { end: meds.all().length ? `${meds.all().length}` : 'None', sub: 'Compare a label, set a reminder', onClick: () => go('#/track/meds') }),
+    row('Medicines', { end: medsEnd(s.meds), sub: medsSub(s.meds), onClick: () => go('#/track/meds') }),
     row('Lab results', { end: labs.all().length ? `${labs.all().length}` : 'None', sub: 'Enter values, see the range', onClick: () => go('#/track/labs') }),
     row('Tracked pain', { end: openEpisodes().length ? `${openEpisodes().length}` : 'None', sub: 'Watch how a symptom changes', onClick: () => go('#/track/pain') }),
     row('Sun and air', { sub: 'UV, what SPF you need, air quality', onClick: () => go('#/track/outside') }),
   ));
 }
+
+/* The row reports the day rather than a count of medicines, which said the
+   same thing whether every dose was taken or none were. */
+const medsEnd = m => (!m.count ? 'None' : m.total ? `${m.outstanding} of ${m.total}` : 'None today');
+const medsSub = m => {
+  if (!m.count) return 'Set up a reminder, or compare two labels';
+  if (!m.total) return m.next ? `Next at ${m.next.time}` : 'No times set';
+  return m.outstanding ? 'Still to take today' : 'All taken today';
+};
 
 /* ---------- Food ----------
  *
@@ -467,172 +477,323 @@ function routeVerdict(a, b) {
 }
 
 export function renderMeds(screen, { live }) {
-  const state = {
-    a: { ingredient: '', strength: '', form: '', route: '' },
-    b: { ingredient: '', strength: '', form: '', route: '' },
+  /* Doses first. This screen is reached from a tab called Track, and the label
+     comparison used to sit above the schedule, so anyone here to keep on top
+     of their medicines had to scroll past a tool for a different job to find
+     the one they came for. */
+  const draw = () => {
+    screen.replaceChildren();
+    drawDoses();
+    drawList();
+    drawAdd();
+    drawCompare();
   };
 
-  const FIELDS = [
-    { id: 'ingredient', label: 'Active ingredient', hint: 'The small print, not the big name' },
-    { id: 'strength', label: 'Strength', hint: '500 mg' },
-    { id: 'form', label: 'Form', hint: 'Tablet, capsule, suspension' },
-    { id: 'route', label: 'Route', hint: 'By mouth' },
-  ];
+  /* ---- Today ---- */
+  function drawDoses() {
+    const list = meds.all();
+    screen.appendChild(eyebrow('Medicines'));
+    screen.appendChild(el('h1', null, 'What to take, and when'));
 
-  screen.appendChild(eyebrow('Label check'));
-  screen.appendChild(el('h1', null, 'Are these two the same medicine?'));
-  screen.appendChild(el('p', null,
-    'Type what each box says. The app compares the fields and explains where they '
-    + 'differ. It does not tell you how much to take, and it does not tell you to '
-    + 'swap one for the other.'));
-
-  const cols = el('div', 'compare');
-  ['a', 'b'].forEach(side => {
-    const c = el('div', 'compare__col');
-    c.appendChild(fieldLabel(side === 'a' ? 'Box one' : 'Box two'));
-    FIELDS.forEach(f => {
-      const wrap = el('label', 'compare__field');
-      wrap.appendChild(fieldLabel(f.label));
-      const input = el('input', 'field');
-      input.placeholder = f.hint;
-      input.setAttribute('aria-label', `${f.label}, box ${side === 'a' ? 'one' : 'two'}`);
-      input.addEventListener('input', () => { state[side][f.id] = input.value; verdict(); });
-      wrap.appendChild(input);
-      c.appendChild(wrap);
-    });
-    cols.appendChild(c);
-  });
-  screen.appendChild(cols);
-
-  screen.appendChild(el('h2', null, 'What matches'));
-  const out = el('div');
-  screen.appendChild(out);
-
-  function verdict() {
-    out.replaceChildren();
-
-    const ing = compareIngredients(state.a.ingredient, state.b.ingredient);
-    const ingKind = {
-      same: 'ok', 'same-different-name': 'ok', 'same-different-salt': 'warn',
-      related: 'bad', different: 'bad', unknown: 'warn',
-    }[ing.verdict];
-
-    const checks = [
-      { label: 'Active ingredient', v: { k: ingKind, t: ing.line, why: ing.detail } },
-      { label: 'Strength', v: strengthVerdict(state.a.strength, state.b.strength) },
-      { label: 'Form', v: formVerdict(state.a.form, state.b.form) },
-      { label: 'Route', v: routeVerdict(state.a.route, state.b.route) },
-    ];
-
-    const list = el('div', 'rows');
-    let shown = 0;
-    checks.forEach(r => {
-      if (r.v.k === 'wait') return;
-      shown++;
-      const item = el('div', 'verdict');
-      item.dataset.verdict = r.v.k;
-      const head = el('div', 'verdict__head');
-      head.append(el('span', null, r.label), el('span', 'verdict__mark', r.v.t));
-      item.appendChild(head);
-      if (r.v.why) item.appendChild(el('p', 'verdict__why', r.v.why));
-      list.appendChild(item);
-    });
-    if (!shown) {
-      out.appendChild(el('p', 'empty', 'Fill in a field on both boxes to compare them.'));
+    if (!list.length) {
+      screen.appendChild(el('p', null,
+        'Add a medicine and this becomes a list of what is due today. '
+        + 'Everything stays on this device, and the app never says what to '
+        + 'take or how much.'));
       return;
     }
-    out.appendChild(list);
 
-    // What each typed name resolves to once recognised.
-    [state.a.ingredient, state.b.ingredient].forEach((name, i) => {
-      const d = describeIngredient(name);
-      if (!d) return;
-      const box = panel(
-        eyebrow(`Box ${i === 0 ? 'one' : 'two'} is ${d.inn}`),
-        el('p', null, d.note),
-      );
-      if (d.alsoCalled.length) {
-        box.appendChild(el('p', 'hint', 'Also printed as: ' + d.alsoCalled.join(', ') + '.'));
-      }
-      if (d.watch) box.appendChild(el('p', null, d.watch));
-      box.style.marginBlockStart = 'var(--s-3)';
-      out.appendChild(box);
-    });
-
-    if (!state.a.ingredient || !state.b.ingredient) return;
-
-    const anyBad = checks.some(r => r.v.k === 'bad');
-    const summary = panel();
-    summary.style.marginBlockStart = 'var(--s-4)';
-    if (anyBad) {
-      summary.dataset.severity = 'now';
-      summary.append(
-        eyebrow('Something does not line up'),
-        el('p', null,
-          'At least one field that has to match does not. Read those lines on both '
-          + 'boxes again. If they still differ, ask the pharmacist before you use '
-          + 'one in place of the other.'),
-      );
-    } else {
-      summary.append(
-        eyebrow('The fields line up'),
-        el('p', null,
-          'Same ingredient, same amount, same route. That is what makes two boxes '
-          + 'comparable. It does not tell you how much to take or how often, which '
-          + 'is on the label and from whoever prescribed it.'),
-        el('p', null,
-          'Two things this check cannot see. What else is in the box, since '
-          + 'combination products add ingredients the front of the pack does not '
-          + 'mention. And how your own body handles it, which is why a pharmacist '
-          + 'is worth the two minutes.'),
-      );
+    const day = dueToday(list, dosesTaken.all());
+    const head = panel();
+    head.append(
+      el('div', 'readout-big', String(day.outstanding)),
+      el('div', 'readout-unit', day.outstanding === 0
+        ? `left, all ${day.total} taken today`
+        : `left to take of ${day.total} today`),
+    );
+    if (day.late) {
+      head.dataset.severity = 'soon';
+      head.appendChild(el('p', 'hint', day.late === 1
+        ? 'One is past its time.'
+        : `${day.late} are past their time.`));
     }
-    out.appendChild(summary);
+    screen.appendChild(head);
+
+    if (!day.total) {
+      screen.appendChild(el('p', 'hint',
+        'Nothing scheduled for today. The next one is '
+        + (nextAcross(list) ?? 'not set yet') + '.'));
+      return;
+    }
+
+    screen.appendChild(el('h2', null, 'Today'));
+    screen.appendChild(rows(...day.doses.map(d => {
+      const r = row(d.med.name, {
+        sub: d.med.dose ? `${d.time}, ${d.med.dose}` : d.time,
+        end: d.taken ? 'Taken' : 'Take',
+        onClick: () => {
+          if (d.taken) {
+            /* Marked by mistake is a normal thing to do, and leaving no way
+               back would make the count lie for the rest of the day. */
+            const hit = dosesTaken.all().find(t =>
+              t.medId === d.med.id && t.time === d.time && t.day === dayKey(new Date()));
+            if (hit) dosesTaken.remove(hit.id);
+            live.textContent = `${d.med.name} at ${d.time} put back`;
+          } else {
+            dosesTaken.add({ medId: d.med.id, day: dayKey(new Date()), time: d.time });
+            live.textContent = `${d.med.name} at ${d.time} marked as taken`;
+          }
+          draw();
+        },
+      });
+      // The name came off a box, so it is left as it was typed.
+      r.querySelector('span')?.setAttribute('translate', 'no');
+      if (d.taken) r.dataset.verdict = 'ok';
+      else if (d.late) r.dataset.verdict = 'warn';
+      return r;
+    })));
+    screen.appendChild(el('p', 'hint',
+      'Tap a dose to mark it taken, and tap it again to put it back.'));
   }
 
-  verdict();
-
-  screen.appendChild(el('h2', null, 'Reminders'));
-  const remWrap = el('div');
-  screen.appendChild(remWrap);
-
-  const drawReminders = () => {
-    remWrap.replaceChildren();
+  /* ---- Everything on the list ---- */
+  function drawList() {
     const list = meds.all();
-    if (!list.length) {
-      remWrap.appendChild(el('p', 'empty',
-        'No reminders set. Add one and the app shows the name you typed and the '
-        + 'time you chose, nothing else.'));
-      return;
-    }
-    remWrap.appendChild(rows(...list.map(m =>
-      removableRow(m.name, {
-        end: m.schedule,
-        sub: 'Tap twice to remove',
-        onRemove: () => { meds.remove(m.id); drawReminders(); },
-      }))));
-  };
-  drawReminders();
+    if (!list.length) return;
+    screen.appendChild(el('h2', null, 'Your medicines'));
+    screen.appendChild(rows(...list.map(m => {
+      const r = removableRow(m.name, {
+        sub: describe(m),
+        end: m.dose || '',
+        confirm: 'Remove?',
+        onRemove: () => {
+          meds.remove(m.id);
+          live.textContent = `${m.name} removed`;
+          draw();
+        },
+      });
+      r.querySelector('span')?.setAttribute('translate', 'no');
+      return r;
+    })));
+    screen.appendChild(el('p', 'hint', 'Tap one twice to remove it.'));
+  }
 
-  const form = el('form', 'inline-form');
-  const name = el('input', 'field');
-  name.placeholder = 'Name from the box';
-  name.setAttribute('aria-label', 'Product name');
-  const when = el('input', 'field field--num');
-  when.type = 'time';
-  when.setAttribute('aria-label', 'Time');
-  const go = button('Add', 'btn');
-  go.type = 'submit';
-  form.append(name, when, go);
-  form.addEventListener('submit', ev => {
-    ev.preventDefault();
-    if (!name.value.trim()) return;
-    meds.add({ name: name.value.trim(), schedule: when.value || 'No time set', due: true });
-    live.textContent = 'Reminder added';
-    name.value = '';
-    drawReminders();
-  });
-  screen.appendChild(form);
+  /* ---- Adding one ---- */
+  function drawAdd() {
+    let times = ['08:00'];
+    let days = [...EVERY_DAY];
+
+    screen.appendChild(el('h2', null, 'Add a medicine'));
+    const form = el('form', 'stack');
+
+    const name = el('input', 'field');
+    name.placeholder = 'Name from the box';
+    name.setAttribute('aria-label', 'Medicine name');
+    const dose = el('input', 'field');
+    dose.placeholder = 'Dose, for example 500 mg';
+    dose.setAttribute('aria-label', 'Dose, optional');
+    form.append(fieldLabel('What it is'), name, dose);
+
+    /* Times of day. A list rather than a count, because three times a day
+       means nothing without knowing which three. */
+    form.appendChild(fieldLabel('Times of day'));
+    const timeRow = el('div', 'chiprow');
+    form.appendChild(timeRow);
+
+    const drawTimes = () => {
+      timeRow.replaceChildren();
+      times.forEach((t, i) => {
+        const b = button(t, 'chipbtn chipbtn--undo', () => {
+          if (times.length === 1) return;   // one time is the minimum
+          times.splice(i, 1);
+          drawTimes();
+        });
+        b.setAttribute('aria-label', `${t}, tap to remove this time`);
+        timeRow.appendChild(b);
+      });
+      const add = el('input', 'field field--num');
+      add.type = 'time';
+      add.setAttribute('aria-label', 'Add another time');
+      add.addEventListener('change', () => {
+        if (!add.value || times.includes(add.value)) return;
+        times = [...times, add.value].sort();
+        drawTimes();
+      });
+      timeRow.appendChild(add);
+    };
+    drawTimes();
+
+    /* Which days. Every day is the common case and is the starting point, and
+       the shortcuts below cover most of the rest in one tap. */
+    form.appendChild(fieldLabel('Which days'));
+    const dayRow = el('div', 'daypick');
+    form.appendChild(dayRow);
+    const shortcuts = el('div', 'chiprow');
+    form.appendChild(shortcuts);
+
+    const drawDays = () => {
+      dayRow.replaceChildren();
+      DAYS.forEach(d => {
+        const b = button(d.short, 'daypick__day', () => {
+          days = days.includes(d.n) ? days.filter(x => x !== d.n) : [...days, d.n];
+          if (!days.length) days = [d.n];   // never leave a schedule with no day
+          drawDays();
+        });
+        b.setAttribute('aria-pressed', String(days.includes(d.n)));
+        b.setAttribute('aria-label', d.label);
+        dayRow.appendChild(b);
+      });
+      shortcuts.replaceChildren();
+      [['Every day', EVERY_DAY], ['Weekdays', [1, 2, 3, 4, 5]], ['Weekends', [0, 6]]]
+        .forEach(([label, set]) => {
+          shortcuts.appendChild(button(label, 'chipbtn', () => { days = [...set]; drawDays(); }));
+        });
+    };
+    drawDays();
+
+    const preview = el('p', 'hint');
+    form.appendChild(preview);
+    const refresh = () => { preview.textContent = describe({ times, days }); };
+
+    const go = button('Add medicine', 'btn btn--block');
+    go.type = 'submit';
+    form.appendChild(go);
+    form.addEventListener('submit', ev => {
+      ev.preventDefault();
+      if (!name.value.trim()) { name.focus(); return; }
+      meds.add({ name: name.value.trim(), dose: dose.value.trim(), times, days });
+      live.textContent = `${name.value.trim()} added`;
+      draw();
+    });
+    // Keeps the sentence under the controls honest as they are changed.
+    form.addEventListener('click', refresh);
+    form.addEventListener('change', refresh);
+    refresh();
+
+    screen.appendChild(form);
+  }
+
+  /* ---- Label check, after the tracking ---- */
+  function drawCompare() {
+    const state = {
+      a: { ingredient: '', strength: '', form: '', route: '' },
+      b: { ingredient: '', strength: '', form: '', route: '' },
+    };
+    const FIELDS = [
+      { id: 'ingredient', label: 'Active ingredient', hint: 'The small print, not the big name' },
+      { id: 'strength', label: 'Strength', hint: '500 mg' },
+      { id: 'form', label: 'Form', hint: 'Tablet, capsule, suspension' },
+      { id: 'route', label: 'Route', hint: 'By mouth' },
+    ];
+
+    const wrap = el('div');
+    wrap.style.marginBlockStart = 'var(--s-6)';
+    wrap.appendChild(el('h2', null, 'Are two boxes the same medicine?'));
+    wrap.appendChild(el('p', null,
+      'A separate job from the list above. Type what each box says and the app '
+      + 'compares the fields. It does not tell you how much to take, and it '
+      + 'does not tell you to swap one for the other.'));
+
+    const cols = el('div', 'compare');
+    ['a', 'b'].forEach(side => {
+      const c = el('div', 'compare__col');
+      c.appendChild(fieldLabel(side === 'a' ? 'Box one' : 'Box two'));
+      FIELDS.forEach(f => {
+        const l = el('label', 'compare__field');
+        l.appendChild(fieldLabel(f.label));
+        const input = el('input', 'field');
+        input.placeholder = f.hint;
+        input.setAttribute('aria-label', `${f.label}, box ${side === 'a' ? 'one' : 'two'}`);
+        input.addEventListener('input', () => { state[side][f.id] = input.value; verdict(); });
+        l.appendChild(input);
+        c.appendChild(l);
+      });
+      cols.appendChild(c);
+    });
+    wrap.appendChild(cols);
+
+    const out = el('div');
+    wrap.appendChild(out);
+    screen.appendChild(wrap);
+
+    function verdict() {
+      out.replaceChildren();
+      const ing = compareIngredients(state.a.ingredient, state.b.ingredient);
+      const ingKind = {
+        same: 'ok', 'same-different-name': 'ok', 'same-different-salt': 'warn',
+        related: 'bad', different: 'bad', unknown: 'warn',
+      }[ing.verdict];
+
+      const checks = [
+        { label: 'Active ingredient', v: { k: ingKind, t: ing.line, why: ing.detail } },
+        { label: 'Strength', v: strengthVerdict(state.a.strength, state.b.strength) },
+        { label: 'Form', v: formVerdict(state.a.form, state.b.form) },
+        { label: 'Route', v: routeVerdict(state.a.route, state.b.route) },
+      ];
+
+      const list = el('div', 'rows');
+      let shown = 0;
+      checks.forEach(r => {
+        if (r.v.k === 'wait') return;
+        shown++;
+        const item = el('div', 'verdict');
+        item.dataset.verdict = r.v.k;
+        const head = el('div', 'verdict__head');
+        head.append(el('span', null, r.label), el('span', 'verdict__mark', r.v.t));
+        item.appendChild(head);
+        if (r.v.why) item.appendChild(el('p', 'verdict__why', r.v.why));
+        list.appendChild(item);
+      });
+      if (shown) out.appendChild(list);
+
+      if (!state.a.ingredient || !state.b.ingredient) return;
+
+      const anyBad = checks.some(r => r.v.k === 'bad');
+      const summary = panel();
+      summary.style.marginBlockStart = 'var(--s-4)';
+      if (anyBad) {
+        summary.dataset.severity = 'now';
+        summary.append(
+          eyebrow('Something does not line up'),
+          el('p', null,
+            'At least one field that has to match does not. Read those lines on both '
+            + 'boxes again. If they still differ, ask the pharmacist before you use '
+            + 'one in place of the other.'),
+        );
+      } else {
+        summary.append(
+          eyebrow('The fields line up'),
+          el('p', null,
+            'Same ingredient, same amount, same route. That is what makes two boxes '
+            + 'comparable. It does not tell you how much to take or how often, which '
+            + 'is on the label and from whoever prescribed it.'),
+          el('p', null,
+            'Two things this check cannot see. What else is in the box, since '
+            + 'combination products add ingredients the front of the pack does not '
+            + 'mention. And how your own body handles it, which is why a pharmacist '
+            + 'is worth the two minutes.'),
+        );
+      }
+      out.appendChild(summary);
+    }
+
+    verdict();
+  }
+
+  draw();
+}
+
+/** The nearest dose across every medicine, as a sentence, or null. */
+function nextAcross(list) {
+  const soonest = list
+    .map(m => nextDose(m))
+    .filter(Boolean)
+    .sort((a, b) => a.date - b.date || a.time.localeCompare(b.time))[0];
+  if (!soonest) return null;
+  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  return soonest.today
+    ? `today at ${soonest.time}`
+    : `${days[soonest.date.getDay()]} at ${soonest.time}`;
 }
 
 /* ---------- Labs ---------- */

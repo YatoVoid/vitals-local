@@ -160,12 +160,30 @@ function tileBuilders(s, go) {
       return t;
     },
 
-    meds: () => tile(
-      'Medicines',
-      s.medsDue ? `${s.medsDue} due` : 'None due',
-      s.medsDue ? 'Tap to review' : 'Nothing scheduled',
-      () => go('#/track/meds'),
-    ),
+    /* Not a side feature. Once anything is on the list this tile says what is
+       still to take today, and turns amber when a dose is past its time. With
+       nothing added it invites rather than reporting a hollow zero. */
+    meds: () => {
+      const m = s.meds;
+      if (!m.count) {
+        return tile('Medicines', 'None added', 'Tap to set one up', () => go('#/track/meds'));
+      }
+      if (!m.total) {
+        const next = m.next
+          ? (m.next.today ? `Next today at ${m.next.time}` : `Next ${DAY_NAMES[m.next.date.getDay()]} at ${m.next.time}`)
+          : 'No times set';
+        return tile('Medicines', 'None today', next, () => go('#/track/meds'));
+      }
+      const value = m.outstanding
+        ? `${m.outstanding} of ${m.total} left`
+        : 'All taken';
+      const sub = m.outstanding
+        ? (m.late ? `${m.late} past their time` : `Next at ${nextUntaken(m)}`)
+        : 'Nothing left today';
+      const t = tile('Medicines', value, sub, () => go('#/track/meds'));
+      if (m.late) t.dataset.severity = 'soon';
+      return t;
+    },
 
     uv: () => {
       const hit = lastConditions();
@@ -202,6 +220,14 @@ function tileBuilders(s, go) {
       return t;
     },
   };
+}
+
+const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday',
+                   'Friday', 'Saturday'];
+
+/** The time of the first dose today that has not been marked. */
+function nextUntaken(m) {
+  return m.doses.find(d => !d.taken)?.time ?? '';
 }
 
 /* A reading past its shelf life still says something useful, as long as the
