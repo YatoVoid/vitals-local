@@ -49,7 +49,6 @@ export function boot(mountPoint) {
 
   /* ---- Status strip ---- */
   const bar = el('div', 'statusbar');
-  bar.append(el('i', 'statusbar__dot'));
   const title = el('span', 'statusbar__title', 'Home');
   bar.appendChild(title);
   const end = el('div', 'statusbar__end');

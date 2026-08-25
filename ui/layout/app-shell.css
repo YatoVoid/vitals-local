@@ -68,14 +68,6 @@ body {
   text-transform: var(--label-transform);
   color: var(--ink-dim);
 }
-.statusbar__dot {
-  inline-size: 6px;
-  block-size: 6px;
-  border-radius: var(--r-pill);
-  background: var(--accent);
-  box-shadow: var(--bloom);
-  animation: blip 2.4s var(--ease) infinite;
-}
 @keyframes blip { 0%, 70%, 100% { opacity: 1; } 82% { opacity: 0.2; } }
 .statusbar__title { color: var(--ink-mid); }
 .statusbar__end { margin-inline-start: auto; display: flex; gap: var(--s-3); }
