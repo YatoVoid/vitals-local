@@ -1,20 +1,4 @@
-/* Low back pain.
- *
- * The red flags here are the set that national back pain guidelines agree
- * on: cauda equina syndrome (saddle numbness, bladder or bowel change,
- * bilateral leg symptoms), possible fracture, possible infection, and
- * possible malignancy. Cauda equina turns on hours rather than days, so the
- * saddle and bladder questions are asked early of anyone with leg symptoms.
- *
- * The straight leg pattern and pain running below the knee separate nerve
- * root irritation from ordinary mechanical pain; the two are managed
- * differently.
- *
- * Priors reflect the well replicated finding that the large majority of low
- * back pain in primary care has no identifiable structural cause and settles,
- * that a minority is nerve root related, and that serious causes are rare
- * but are the reason the screening questions exist.
- */
+// Low back pain.
 
 export const BACK = {
   id: 'back',

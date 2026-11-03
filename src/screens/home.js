@@ -1,10 +1,4 @@
-/* Home: today at a glance, and the primary entry points.
- *
- * The tiles are a set the person arranges, so each one is built by id and the
- * order comes from settings. Nothing here fetches: the sun and air tiles read
- * the last stored reading, because a summary should never be what puts a
- * request on the network.
- */
+// Home: today at a glance, and the primary entry points.
 
 import { el, eyebrow, panel, tile, ring, button, reorderable } from '../app/ui.js';
 import { summary, settings, profile } from '../app/store.js';
@@ -23,32 +17,11 @@ const dayLabel = () => new Date().toLocaleDateString([], {
   weekday: 'long', month: 'short', day: 'numeric',
 });
 
-/* The arrangement someone gets before they move anything. Today first, then
-   what it is like outside, then what has already been recorded. */
+// The arrangement someone gets before they move anything.
 export const DEFAULT_ORDER = ['water', 'energy', 'uv', 'air', 'symptoms', 'meds'];
 
-/**
- * The order to draw in, given what was saved and what exists now.
- *
- * A saved arrangement is from whatever version wrote it, so ids that no longer
- * exist are dropped and ids added since are appended. Without that, a new tile
- * would be invisible to anyone who had ever rearranged, and a removed one
- * would throw.
- *
- * @param {unknown} saved
- * @param {string[]} available
- */
-/**
- * Every tile that exists, in the order it should appear before anyone moves
- * anything.
- *
- * The arrangement was being read off the order the builders happen to be
- * written in, which is not an arrangement anyone chose and quietly ignored
- * DEFAULT_ORDER. A tile added to the builders but not listed there still
- * appears, at the end, rather than vanishing.
- *
- * @param {object} builders tile id to builder function
- */
+// The order to draw in, given what was saved and what exists now.
+// Every tile that exists, in the order it should appear before anyone moves anything.
 export function availableTiles(builders) {
   const ids = Object.keys(builders);
   return [
@@ -72,7 +45,7 @@ export function renderHome(screen, { go, live }) {
   screen.appendChild(eyebrow(dayLabel()));
   screen.appendChild(el('h1', null, greeting()));
 
-  /* Quick actions. One tap to the thing, no menu in between. */
+  // Quick actions.
   const quick = el('div', 'chiprow');
   [
     ['I have pain', () => go('#/body')],
@@ -104,7 +77,7 @@ export function renderHome(screen, { go, live }) {
   screen.appendChild(el('p', 'hint',
     'Hold a tile to pick it up, then drag it where you want it.'));
 
-  /* The privacy claim belongs on the first screen, stated plainly once. */
+  // The privacy claim belongs on the first screen, stated plainly once.
   const note = panel(
     eyebrow('Where your data lives'),
     el('p', null,
@@ -128,7 +101,7 @@ export function renderHome(screen, { go, live }) {
   screen.appendChild(packs);
 }
 
-/* One builder per tile, keyed by the id the saved order refers to. */
+// One builder per tile, keyed by the id the saved order refers to.
 function tileBuilders(s, go) {
   return {
     symptoms: () => {
@@ -160,9 +133,7 @@ function tileBuilders(s, go) {
       return t;
     },
 
-    /* Not a side feature. Once anything is on the list this tile says what is
-       still to take today, and turns amber when a dose is past its time. With
-       nothing added it invites rather than reporting a hollow zero. */
+    // Not a side feature.
     meds: () => {
       const m = s.meds;
       if (!m.count) {
@@ -225,13 +196,13 @@ function tileBuilders(s, go) {
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday',
                    'Friday', 'Saturday'];
 
-/** The time of the first dose today that has not been marked. */
+// The time of the first dose today that has not been marked.
 function nextUntaken(m) {
   return m.doses.find(d => !d.taken)?.time ?? '';
 }
 
-/* A reading past its shelf life still says something useful, as long as the
-   tile gives its age rather than presenting it as now. */
+// A reading past its shelf life still says something useful, as long as the tile gives its age
+// rather than presenting it as now.
 function staleLabel(at) {
   const hours = Math.round((Date.now() - at) / 3600000);
   if (hours < 1) return 'from earlier';

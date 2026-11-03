@@ -1,6 +1,4 @@
-/* Vitals Local, shell and primitives shared by every component.
- * Consumes tokens.css. Adds no colour of its own.
- */
+/* Vitals Local, shell and primitives shared by every component. */
 
 **::before, *::after { box-sizing: border-box; }
 
@@ -18,8 +16,8 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-/* The scanline wash belongs to the phosphor theme and is a no-op elsewhere,
-   so no component needs to know which theme is active. */
+/* The scanline wash belongs to the phosphor theme and is a no-op elsewhere, so no component
+   needs to know which theme is active. */
 body::after {
   content: "";
   position: fixed;
@@ -43,7 +41,7 @@ h3 { font-size: var(--t-h3); font-weight: var(--w-strong); }
 p { margin: 0 0 var(--s-4); max-inline-size: var(--measure); text-wrap: pretty; }
 p:last-child { margin-block-end: 0; }
 
-/* ---- Shell ---- */
+/* Shell */
 .shell {
   min-block-size: 100dvh;
   display: grid;
@@ -57,8 +55,7 @@ p:last-child { margin-block-end: 0; }
   padding: var(--s-5) var(--gutter) var(--s-8);
 }
 
-/* Single column is the default at every width. Two columns are opt-in and
-   collapse without a breakpoint of their own. */
+/* Single column is the default at every width. */
 .split {
   display: grid;
   gap: var(--s-5);
@@ -67,11 +64,7 @@ p:last-child { margin-block-end: 0; }
 
 .stack > * + * { margin-block-start: var(--stack); }
 
-/* ---- Severity rule ----
- * The leading edge of every card states urgency before a word is read.
- * Thickness carries it; colour reinforces. Mirrors under RTL because the
- * edge is logical, not left.
- */
+/* Severity rule ---- The leading edge of every card states urgency before a word is read. */
 .card {
   background: var(--panel-solid);
   border: var(--hairline) solid var(--hair-edge);
@@ -90,14 +83,12 @@ p:last-child { margin-block-end: 0; }
   background: var(--sev-now-wash);
 }
 
-/* ---- Label: the small uppercase eyebrow that names a field or a rank.
-   Uppercase only where the theme asks for it, since uppercase is
-   unreadable in several phase-1 scripts. ---- */
+/* Label: the small uppercase eyebrow that names a field or a rank. */
 .label {
   font-family: var(--font-mono);
   font-size: var(--t-micro);
   font-weight: var(--w-medium);
-  letter-spacing: var(--tr-wide);
+  letter-spacing: var(--tr-normal);
   text-transform: var(--label-transform);
   color: var(--ink-dim);
 }
@@ -108,11 +99,11 @@ p:last-child { margin-block-end: 0; }
 :root:lang(zh) .label,
 :root:lang(ja) .label { text-transform: none; letter-spacing: var(--tr-normal); }
 
-/* Every measured value renders in the mono face, so numbers line up in a
-   column and a unit never gets mistaken for prose. */
+/* Every measured value renders in the mono face, so numbers line up in a column and a unit
+   never gets mistaken for prose. */
 .value { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 
-/* ---- Controls ---- */
+/* Controls */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -162,14 +153,14 @@ p:last-child { margin-block-end: 0; }
   background: var(--inset);
 }
 
-/* ---- Focus. One ring, visible in both themes, never removed. ---- */
+/* Focus. */
 :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
   outline: none;
   box-shadow: var(--focus-ring);
   border-radius: var(--r-md);
 }
 
-/* ---- Screen reader only ---- */
+/* Screen reader only */
 .sr-only {
   position: absolute;
   inline-size: 1px; block-size: 1px;
@@ -178,18 +169,4 @@ p:last-child { margin-block-end: 0; }
   white-space: nowrap;
 }
 
-/* ---- CRT: characters settle in rather than appear.
-   Applies to headings only, never to text someone is mid-read. ---- */
-:root[data-theme="crt"] h1,
-:root[data-theme="crt"] h2 {
-  text-shadow: var(--bloom);
-  animation: settle var(--d-settle) var(--ease-out) both;
-}
-@keyframes settle {
-  from { opacity: 0; letter-spacing: 0.18em; filter: blur(1px); }
-  to   { opacity: 1; letter-spacing: var(--tr-tight); filter: none; }
-}
-@media (prefers-reduced-motion: reduce) {
-  :root[data-theme="crt"] h1,
-  :root[data-theme="crt"] h2 { animation: none; }
 }

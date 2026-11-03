@@ -1,17 +1,4 @@
-/* Symptom console.
- *
- * Carries its own box-sizing reset. The console mounts both inside the app
- * shell and on its own under tests/, so it cannot inherit the reset from
- * app-shell.css without every padded box coming out 32px too wide.
- *
- * A medical instrument, not a form. The body is the screen; everything else
- * is chrome around it, hairlines, corner ticks, tracked mono readouts, a
- * scan sweep. Colour stays back so the accent marks the active element and
- * amber and red keep their meaning.
- *
- * Everything that moves moves on transform or opacity, so the compositor
- * carries it and a mid-range phone keeps its frame budget.
- */
+/* Symptom console. */
 
 .symptom-game,
 .symptom-game *,
@@ -19,8 +6,8 @@
 .symptom-game *::after { box-sizing: border-box; }
 
 .symptom-game {
-  /* The brief's theme contract, aliased onto the product tokens so this
-     feature and the rest of the app cannot drift apart. */
+  /* The brief's theme contract, aliased onto the product tokens so this feature and the
+     rest of the app cannot drift apart. */
   --panel: var(--panel-solid);
   --text: var(--ink);
   --accent2: var(--ink-mid);
@@ -61,7 +48,7 @@
   z-index: var(--z-banner);
 }
 
-/* ---- Status strip ---- */
+/* Status strip */
 .hud {
   position: relative;
   display: flex;
@@ -75,19 +62,11 @@
   text-transform: var(--label-transform);
   color: var(--ink-dim);
 }
-.hud__dot {
-  inline-size: 6px;
-  block-size: 6px;
-  border-radius: var(--r-pill);
-  background: var(--accent);
-  box-shadow: var(--bloom);
-  animation: blip 2.4s var(--ease) infinite;
-}
-@keyframes blip { 0%, 70%, 100% { opacity: 1; } 82% { opacity: 0.2; } }
+.hud__dot { display: none; }
 .hud__spacer { margin-inline-start: auto; }
 .hud__val { color: var(--ink-mid); }
 
-/* ---- Progress: segments, not a smooth fill ---- */
+/* Progress: segments, not a smooth fill */
 .meter {
   display: flex;
   gap: 2px;
@@ -101,7 +80,7 @@
 }
 .meter__seg[data-on="1"] { background: var(--accent); box-shadow: var(--bloom); }
 
-/* ---- Stage ---- */
+/* Stage */
 .stage-host { position: relative; display: grid; overflow: hidden; }
 .stage {
   grid-area: 1 / 1;
@@ -141,7 +120,7 @@
 @keyframes out-left  { to   { opacity: 0; transform: translate3d(-5%, 0, 0); } }
 @keyframes out-right { to   { opacity: 0; transform: translate3d(5%, 0, 0); } }
 
-/* ---- View selector: four states, one control ---- */
+/* View selector: four states, one control */
 .views {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -155,7 +134,7 @@
   border: 0;
   border-inline-start: var(--hairline) solid var(--hair-edge);
   background: transparent;
-  /* Readable by default. These are choices someone taps, not chrome. */
+  /* Readable by default. */
   color: var(--ink-mid);
   font: inherit;
   font-family: var(--font-body);
@@ -167,8 +146,8 @@
   transition: color var(--d-quick) var(--ease), background var(--d-quick) var(--ease);
 }
 
-/* The four view switch on the body map is instrumentation, so it keeps the
-   tracked mono treatment. Nothing else does. */
+/* The four view switch on the body map is instrumentation, so it keeps the tracked mono
+   treatment. */
 .views--hud button {
   font-family: var(--font-mono);
   font-size: var(--t-micro);
@@ -184,14 +163,12 @@
   font-weight: var(--w-strong);
 }
 
-/* ---- BodyMap ---- */
+/* BodyMap */
 .bodymap {
   position: relative;
   display: grid;
   /* The svg stretches to the whole area and centres the figure itself with
-     preserveAspectRatio. Centring the box instead caps the figure at its
-     intrinsic size, leaving 40% of the area unused and every tap target
-     smaller than it has to be. */
+     preserveAspectRatio. */
   grid-template: 1fr / 1fr;
   flex: 1;
   min-block-size: 0;
@@ -214,13 +191,10 @@
   grid-area: 1 / 1;
   inline-size: 100%;
   block-size: 100%;
-  /* A definite box, not an intrinsic one. Percentages resolve because the
-     grid area is definite and the item is stretched into it. */
+  /* A definite box, not an intrinsic one. */
   min-inline-size: 0;
   min-block-size: 0;
-  /* Clipped, not visible. Under a zoom crop the rest of the figure is still
-     drawn, and left visible it spills over the surrounding controls and stays
-     clickable outside the frame. */
+  /* Clipped, not visible. */
   overflow: hidden;
 }
 
@@ -247,25 +221,9 @@
   pointer-events: none;
 }
 
-/* A slow sweep down the figure. One element, one transform, no layout. */
-.bodymap__scan {
-  position: absolute;
-  inset-inline: 0;
-  inset-block-start: 0;
-  block-size: 2px;
-  background: linear-gradient(90deg, transparent, var(--accent), transparent);
-  opacity: 0.45;
-  pointer-events: none;
-  animation: sweep 5s linear infinite;
-}
-@keyframes sweep {
-  from { transform: translate3d(0, 0, 0); opacity: 0; }
-  10%  { opacity: 0.45; }
-  90%  { opacity: 0.45; }
-  to   { transform: translate3d(0, min(58dvh, 30rem), 0); opacity: 0; }
-}
+.bodymap__scan { display: none; }
 
-/* The readout under the figure. Empty until something is targeted. */
+/* The readout under the figure. */
 .readout {
   display: flex;
   align-items: center;
@@ -279,7 +237,7 @@
 }
 .readout[data-empty="1"] { color: var(--ink-dim); }
 
-/* ---- Pain tiles ---- */
+/* Pain tiles */
 .tiles {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
@@ -308,8 +266,7 @@
 }
 .tile__label { font-size: var(--t-small); font-weight: var(--w-medium); }
 .tile:hover { border-color: var(--hair-strong); }
-/* Selected reads three ways at once: border colour, glyph colour, and a
-   corner notch. It survives with colour removed. */
+/* Selected reads three ways at once: border colour, glyph colour, and a corner notch. */
 .tile.selected { border-color: var(--accent); background: var(--accent-wash); }
 .tile.selected .tile__glyph { color: var(--accent); }
 .tile.selected::after {
@@ -321,7 +278,7 @@
   border-inline-start: 8px solid transparent;
 }
 
-/* ---- Chips ---- */
+/* Chips */
 .chips { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2); }
 .chip {
   padding: var(--s-1) var(--s-3);
@@ -335,7 +292,7 @@
   text-transform: var(--label-transform);
 }
 
-/* ---- Context choices ---- */
+/* Context choices */
 .choices { display: grid; gap: var(--s-2); }
 .choices--row { grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr)); }
 .choice {
@@ -359,7 +316,7 @@
 .choice.selected { border-color: var(--accent); background: var(--accent-wash); }
 .choice.selected .choice__mark { color: var(--accent); }
 
-/* ---- Cards ---- */
+/* Cards */
 .cards { display: grid; gap: var(--s-3); }
 .card {
   position: relative;
@@ -387,8 +344,7 @@
 }
 .card__list { margin: 0 0 var(--s-4); padding-inline-start: var(--s-4); }
 .card__list li { margin-block-end: var(--s-2); font-size: var(--t-small); }
-/* A named cause reads as a heading for its own line, not as the first clause
-   of a sentence. */
+/* A named cause reads as a heading for its own line, not as the first clause of a sentence. */
 .card__term {
   display: block;
   font-weight: var(--w-strong);
@@ -396,27 +352,22 @@
 }
 .card__term + span { color: var(--ink-mid); }
 .card__action { inline-size: 100%; }
-/* A red flag is the one card that must not arrive like the others. It settles
-   from slightly further out and slightly under size, and the severity rule
-   draws down its edge, so the eye is taken to the mark that means urgency. */
+/* A red flag is the one card that must not arrive like the others. */
 .card--flag {
   animation:
     flag-in var(--d-settle) var(--ease-out) both,
     rule-light var(--d-settle) var(--ease-out) both;
-  /* Scrolled into view on arrival, so it needs headroom or it lands jammed
-     against the top edge with the heading above it clipped. */
+  /* Scrolled into view on arrival, so it needs headroom or it lands jammed against the top
+     edge with the heading above it clipped. */
   scroll-margin-block-start: var(--s-6);
 }
 @keyframes flag-in {
   from { opacity: 0; transform: translate3d(0, var(--s-3), 0) scale(0.985); }
 }
-/* The severity rule lights up rather than being drawn by an overlay. An
-   absolutely positioned bar sitting on the border escapes the card and pushes
-   the panel sideways. */
+/* The severity rule lights up rather than being drawn by an overlay. */
 @keyframes rule-light { from { border-inline-start-color: transparent; } }
 
-/* The only filled red in the product. Everything around it is outline, so a
-   solid block still stops a person even on a dark instrument screen. */
+/* The only filled red in the product. */
 .btn--urgent {
   inline-size: 100%;
   background: var(--sev-now);
@@ -433,7 +384,7 @@
   font-size: var(--t-small);
 }
 
-/* ---- Secondary actions. Still 44px tall. ---- */
+/* Secondary actions. */
 .linkish {
   align-self: flex-start;
   min-block-size: var(--tap);
@@ -453,13 +404,13 @@
 .linkish:hover { color: var(--accent); }
 .linkish--quiet { color: var(--ink-dim); }
 
-/* ---- Bottom sheet ---- */
+/* Bottom sheet */
 .sheet-host { position: fixed; inset: 0; z-index: var(--z-modal); }
 .scrim {
   position: absolute;
   inset: 0;
-  /* Black in both themes: a tinted scrim shifts the contrast of the sheet
-     above it away from the measured values. */
+  /* Black in both themes: a tinted scrim shifts the contrast of the sheet above it away
+     from the measured values. */
   background: rgb(0 0 0 / 0.62);
   animation: fade var(--d-quick) var(--ease) both;
 }
@@ -497,7 +448,7 @@
 }
 .field::placeholder { color: var(--ink-dim); }
 
-/* ---- Tap acknowledgement ---- */
+/* Tap acknowledgement */
 .pulse { animation: pulse var(--d-settle) var(--ease-out); }
 @keyframes pulse {
   from { box-shadow: 0 0 0 0 var(--accent); }
@@ -505,8 +456,7 @@
   to   { box-shadow: 0 0 0 10px transparent; }
 }
 
-/* ---- Reduced motion. The Settings toggle stamps data-motion on the root
-   and must beat the media query in both directions. ---- */
+/* Reduced motion. */
 @media (prefers-reduced-motion: reduce) {
   :root:not([data-motion="full"]) .symptom-game *,
   :root:not([data-motion="full"]) .symptom-game *::before,
@@ -522,7 +472,7 @@
   transition-duration: 1ms !important;
 }
 
-/* ---- Desktop keeps the mobile shape, just with more air. ---- */
+/* Desktop keeps the mobile shape, just with more air. */
 @media (min-width: 48rem) {
   .stage { padding-inline: var(--s-6); }
   .sheet {
@@ -536,10 +486,8 @@
   .sheet--in { transform: translate3d(-50%, 0, 0); }
 }
 
-/* ================= Pain dial =================
- * Types on a ring instead of stacked in a list. The centre holds the region
- * already chosen, so the question and its subject stay together.
- */
+/* ================= Pain dial ================= Types on a ring instead of stacked in a
+   list. */
 .dial { display: grid; place-items: center; margin-block: var(--s-2); }
 .dial__svg {
   inline-size: min(100%, 22rem);
@@ -573,8 +521,8 @@
   transition: fill var(--d-quick) var(--ease);
   pointer-events: none;
 }
-/* Sized and coloured to be read at arm's length on a phone, where 7px of a
-   200 unit viewBox came out near eleven real pixels in the dim ink. */
+/* Sized and coloured to be read at arm's length on a phone, where 7px of a 200 unit viewBox
+   came out near eleven real pixels in the dim ink. */
 .dial__label {
   font-family: var(--font-mono);
   font-size: 9px;
@@ -607,10 +555,7 @@
   pointer-events: none;
 }
 
-/* ================= Intensity gauge =================
- * The arc is the control. A wide transparent band under it catches the
- * pointer, so a drag near the arc works rather than only exactly on it.
- */
+/* ================= Intensity gauge ================= The arc is the control. */
 .gauge { display: grid; justify-items: center; gap: var(--s-2); }
 .gauge__svg {
   inline-size: min(100%, 17rem);
@@ -661,14 +606,11 @@
   color: var(--ink-mid);
 }
 
-/* Inside the app shell the status strip already exists, so the console
-   drops its own rather than stacking two identical bars. */
+/* Inside the app shell the status strip already exists, so the console drops its own rather
+   than stacking two identical bars. */
 .screen .symptom-game > .hud { display: none; }
 
-/* The console has to be exactly as tall as the space it was given, not
-   taller. min-block-size only sets a floor, so on a short screen the
-   console grew past its host and the overflow was clipped with no way to
-   reach it. A definite height lets the 1fr row resolve and the stage scroll. */
+/* The console has to be exactly as tall as the space it was given, not taller. */
 .screen .symptom-game {
   block-size: 100%;
   min-block-size: 0;
@@ -677,12 +619,10 @@
 .screen--bleed .stage-host { min-block-size: 0; }
 .screen--bleed .stage { padding-block-end: var(--s-6); }
 
-/* ---- Point capture ----
- * A reticle marks the exact spot a person tapped, which is finer than the
- * region it fell inside. Numbered, because more than one place can hurt.
- */
-/* Reticles are svg children, so they share the figure's transform and cannot
-   drift out of register with it the way an overlaid div did. */
+/* Point capture ---- A reticle marks the exact spot a person tapped, which is finer than
+   the region it fell inside. */
+/* Reticles are svg children, so they share the figure's transform and cannot drift out of
+   register with it the way an overlaid div did. */
 .mark circle {
   fill: none;
   stroke: var(--accent);
@@ -706,15 +646,10 @@
   to   { opacity: 1; transform: scale(1); }
 }}
 
-/* Inside the shell the figure shares the screen with a status strip and a
-   tab bar, so it takes a smaller slice than it does standalone. */
-/* An SVG with a viewBox already knows how to fit a box: preserveAspectRatio
-   defaults to meet, so it scales down and centres itself. The trick is
-   giving it a box with a definite height. A stretched grid or flex item is
-   not definite for percentage resolution, so block-size: 100% silently fell
-   back to the drawing's own aspect and ran off the screen. Absolute
-   positioning against the relatively positioned .bodymap is definite, and
-   it holds at every viewport ratio without a single viewport unit. */
+/* Inside the shell the figure shares the screen with a status strip and a tab bar, so it
+   takes a smaller slice than it does standalone. */
+/* An SVG with a viewBox already knows how to fit a box: preserveAspectRatio defaults to
+   meet, so it scales down and centres itself. */
 .screen--bleed .bodymap {
   min-block-size: 6rem;
   overflow: hidden;
@@ -735,12 +670,8 @@
   to   { transform: translate3d(0, 100%, 0); opacity: 0; }
 }
 
-/* ---- Short and wide: a phone on its side, or a small 4:3 desktop ----
- * Under about 34rem of height the figure and its controls stop fitting in a
- * column. Every child gets an explicit row and column here, because auto
- * placement puts the title under the figure the moment one item spans.
- * Scoped to the body step, since the other steps are happy scrolling.
- */
+/* Short and wide: a phone on its side, or a small 4:3 desktop ---- Under about 34rem of
+   height the figure and its controls stop fitting in a column. */
 @media (max-height: 34rem) and (min-width: 34rem) {
   .screen--bleed .stage[data-stage="BODY_SELECT"] {
     display: grid;
@@ -750,8 +681,7 @@
     row-gap: var(--s-2);
     inline-size: min(100%, 50rem);
     padding-block: var(--s-3);
-    /* No align-content: start here. The 1fr row has to take the leftover
-       height, or the figure sizes itself and runs under the tab bar. */
+    /* No align-content: start here. */
   }
   .stage[data-stage="BODY_SELECT"] .stage__eyebrow { grid-column: 1 / -1; grid-row: 1; }
   .stage[data-stage="BODY_SELECT"] .stage__title   { grid-column: 1 / -1; grid-row: 2; margin: 0; }
@@ -767,8 +697,8 @@
   .stage[data-stage="BODY_SELECT"] .stage__footer  { grid-column: 2; grid-row: 5; margin-block-start: 0; }
   .stage[data-stage="BODY_SELECT"] .linkish        { grid-column: 2; grid-row: 5; }
 
-  /* The dial is round, so on a short screen it sits beside its chips
-     rather than above them. */
+  /* The dial is round, so on a short screen it sits beside its chips rather than above
+     them. */
   .screen--bleed .stage[data-stage="PAIN_TYPES"] .dial__svg { inline-size: min(100%, 15rem); }
 }
 
@@ -783,8 +713,7 @@
 .stage { scrollbar-width: none; }
 .stage::-webkit-scrollbar { display: none; }
 
-/* ---- Area zoom ----
-   Cropping the figure to one area is what gets limb zones past the 44px
+/* Area zoom ---- Cropping the figure to one area is what gets limb zones past the 44px
    floor on a phone, so the control that does it is a first class row. */
 .zooms {
   display: flex;
@@ -838,7 +767,7 @@
 }
 
 /* Same reasoning as the shell: the console drops its grid on the soft theme. */
-:root[data-theme="kawaii"] .symptom-game::before { display: none; }
-:root[data-theme="kawaii"] .symptom-game {
+.symptom-game::before { display: none; }
+.symptom-game {
   background: var(--bg);
 }

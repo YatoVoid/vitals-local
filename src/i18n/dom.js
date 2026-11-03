@@ -1,17 +1,8 @@
-/* DOM translation.
- *
- * Walks the rendered tree instead of wrapping strings in t() calls. This
- * covers the article library and anything else rendered from data, and it
- * cannot drift out of sync with a hand-maintained string table.
- *
- * Cached strings are substituted synchronously; only new ones wait on the
- * engine.
- */
+// DOM translation.
 
 import * as cache from './cache.js';
 
-/* Never translated: measured values, code, and anything marked. Passing
-   "1868 kcal" to a translator invites it to alter the number. */
+// Never translated: measured values, code, and anything marked.
 const SKIP_TAGS = new Set(['SCRIPT', 'STYLE', 'CODE', 'PRE', 'SVG', 'CANVAS', 'NOSCRIPT']);
 const SKIP_CLASSES = [
   'value', 'readout-big', 'gauge__num', 'ring__val', 'painchart',
@@ -28,7 +19,7 @@ function skippable(node) {
   return false;
 }
 
-/* Text worth sending. Pure numbers, single symbols and units are not. */
+// Text worth sending.
 function translatable(text) {
   const t = text.trim();
   if (t.length < 2) return false;
@@ -38,22 +29,17 @@ function translatable(text) {
   return true;
 }
 
-/** Attributes that hold text a person reads or hears. */
+// Attributes that hold text a person reads or hears.
 const ATTRS = ['placeholder', 'aria-label', 'title', 'alt'];
 
-/**
- * Collect every translatable string under a root, with where it came from.
- * @returns {{ nodes: Array<{node, kind, attr, original}>, texts: Set<string> }}
- */
+// Collect every translatable string under a root, with where it came from.
 export function collect(root) {
   const nodes = [];
   const texts = new Set();
 
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
     acceptNode(n) {
-      /* Test the English source, not the rendered text. A translated node can
-         fall below the length threshold ("Home" becomes "홈"), which would
-         strand it in whatever language wrote it. */
+      // Test the English source, not the rendered text.
       const source = n.__i18nSource ?? n.nodeValue ?? '';
       if (!translatable(source)) return NodeFilter.FILTER_REJECT;
       if (skippable(n)) return NodeFilter.FILTER_REJECT;
@@ -80,7 +66,7 @@ export function collect(root) {
   return { nodes, texts };
 }
 
-/** Put a translation in place, remembering the English underneath. */
+// Put a translation in place, remembering the English underneath.
 function apply(entry, translated) {
   if (entry.kind === 'text') {
     if (entry.node.__i18nSource == null) entry.node.__i18nSource = entry.original;
@@ -95,7 +81,7 @@ function apply(entry, translated) {
   }
 }
 
-/** Put the English back, for switching to English or showing an original. */
+// Put the English back, for switching to English or showing an original.
 export function revert(root) {
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
   for (let n = walker.nextNode(); n; n = walker.nextNode()) {
@@ -109,10 +95,7 @@ export function revert(root) {
   });
 }
 
-/**
- * Translate everything under root that is already cached, right now.
- * @returns {string[]} the strings that were not cached
- */
+// Translate everything under root that is already cached, right now.
 export function applyCached(root, lang) {
   if (lang === 'en') { revert(root); return []; }
   const { nodes } = collect(root);
@@ -125,7 +108,7 @@ export function applyCached(root, lang) {
   return [...missing];
 }
 
-/** Apply a freshly translated batch to whatever is on screen now. */
+// Apply a freshly translated batch to whatever is on screen now.
 export function applyBatch(root, lang, results) {
   if (!results.size) return;
   const { nodes } = collect(root);
@@ -137,18 +120,8 @@ export function applyBatch(root, lang, results) {
 }
 
 
-/* ---- Critical text ----
- *
- * Machine translation is not reliable enough for the lines that route someone
- * to emergency care. "Go to emergency now. Do not drive yourself." came back
- * from the on-device model as Russian meaning "transition into an emergency
- * situation" and "do not lead yourself".
- *
- * Elements marked data-critical therefore render the translation with the
- * English kept underneath it. Leaving these untranslated would strand anyone
- * who reads no English; showing both lets the reader and anyone with them
- * check it.
- */
+// Critical text Machine translation is not reliable enough for the lines that route someone to
+// emergency care.
 export function markOriginals(root, lang) {
   root.querySelectorAll('[data-critical] .i18n-original').forEach(n => n.remove());
   if (lang === 'en') return;

@@ -1,8 +1,4 @@
-/* Route table.
- *
- * `depth` drives slide direction: a deeper screen enters from the end edge, a
- * shallower one from the start edge, matching a back gesture.
- */
+// Route table.
 
 import { renderHome } from '../screens/home.js';
 import { renderBody } from '../screens/body.js';
@@ -25,8 +21,8 @@ export const TABS = [
   { label: 'You',   icon: 'you',   route: '#/you',   match: '#/you' },
 ];
 
-/* An episode route carries its id in the hash, so a person can keep a link
-   to one they are watching. Resolved at match time rather than listed. */
+// An episode route carries its id in the hash, so a person can keep a link to one they are
+// watching.
 export function resolveRoute(hash) {
   const direct = SCREENS[hash];
   if (direct) return direct;

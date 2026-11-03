@@ -1,17 +1,6 @@
-/* Display vocabulary for the symptom console.
- *
- * Region ids are hierarchical and view-independent: the body map returns an
- * id and nothing downstream needs to know which way the figure was facing.
- * `.left` and `.right` are always the person's own.
- *
- * Clinical logic lives in src/triage/. This file holds labels only.
- */
+// Display vocabulary for the symptom console.
 
-/* ---- Body regions ----
- * Ids are hierarchical and view-independent. The map hands back an id; the
- * engine never needs to know which way the figure was facing. `.left` and
- * `.right` are always the person's own left and right.
- */
+// Body regions Ids are hierarchical and view-independent.
 export const REGIONS = {
   'head.face':            { label: 'Face' },
   'head.back':            { label: 'Back of head' },
@@ -73,10 +62,7 @@ export const REGIONS = {
   'heel.right':           { label: 'Right heel' },
 };
 
-/* ---- Pain types ----
- * Labels are one or two words. The glyph is the non-colour cue that marks a
- * selected tile, so selection reads without relying on the accent hue.
- */
+// Pain types Labels are one or two words.
 export const PAIN_TYPES = [
   { id: 'pain.sharp',       label: 'Sharp',        glyph: '▲', family: 'somatic' },
   { id: 'pain.dull',        label: 'Dull',         glyph: '●', family: 'somatic' },
@@ -91,7 +77,5 @@ export const PAIN_TYPES = [
   { id: 'pain.numbness',    label: 'Numb',         glyph: '○', family: 'neuropathic', extra: true },
   { id: 'pain.cramp_waves', label: 'Waves',        glyph: '∿', family: 'visceral',    extra: true },
   // "Cramping in waves" and "burning after exertion" in the tree vocabulary.
-  // A wedge on the dial holds about nine characters before it runs into its
-  // neighbour, so the screen gets the short name and the id keeps the term.
   { id: 'pain.burn_effort', label: 'Effort',        glyph: '⇡', family: 'vascular',  extra: true },
 ];

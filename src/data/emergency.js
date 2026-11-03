@@ -1,14 +1,4 @@
-/* Emergency numbers by country.
- *
- * The number to dial is the one piece of a red flag screen that has to be
- * right, so this table only carries countries where the number is settled and
- * widely published. Anywhere else the app says it does not know rather than
- * offering a number that might ring nowhere.
- *
- * `call` is what to dial for an ambulance. Where a country runs a separate
- * medical line alongside the general one, `also` records the general number,
- * because either will reach help and people know one or the other.
- */
+// Emergency numbers by country.
 
 const EU_112 = ['AT', 'BE', 'BG', 'HR', 'CY', 'CZ', 'DK', 'EE', 'FI', 'FR',
   'DE', 'GR', 'HU', 'IE', 'IT', 'LV', 'LT', 'LU', 'MT', 'NL', 'PL', 'PT',
@@ -20,7 +10,7 @@ const EU_112 = ['AT', 'BE', 'BG', 'HR', 'CY', 'CZ', 'DK', 'EE', 'FI', 'FR',
 const TABLE = {};
 for (const iso of EU_112) TABLE[iso] = { call: '112' };
 
-/* Countries whose ambulance line is not 112. */
+// Countries whose ambulance line is not 112.
 Object.assign(TABLE, {
   US: { call: '911' },
   CA: { call: '911' },
@@ -87,24 +77,13 @@ Object.assign(TABLE, {
   MN: { call: '103' },
 });
 
-/**
- * What to dial where this person is.
- *
- * @param {string} iso two letter country code
- * @returns {{ call: string, also?: string } | null} null when unlisted
- */
+// What to dial where this person is.
 export function emergencyFor(iso) {
   if (!iso) return null;
   return TABLE[String(iso).toUpperCase()] ?? null;
 }
 
-/**
- * The line to print above the number.
- *
- * Written so it still reads correctly when the country is not known, which is
- * the case the wording has to survive: naming no number is safe, naming the
- * wrong one is not.
- */
+// The line to print above the number.
 export function emergencyLine(iso, countryName) {
   const hit = emergencyFor(iso);
   if (!hit) {
@@ -126,7 +105,7 @@ export function emergencyLine(iso, countryName) {
   };
 }
 
-/** Every country this table covers, for the test that guards it. */
+// Every country this table covers, for the test that guards it.
 export function coveredCountries() {
   return Object.keys(TABLE);
 }

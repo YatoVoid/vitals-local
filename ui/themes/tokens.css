@@ -1,26 +1,8 @@
-/* Vitals Local, token foundation.
- *
- * Two themes, one skeleton. Layout, spacing, and component structure never
- * change between them; only colour, type, overlay, and radius do.
- *
- *   med  (default), slick medical instrument. Near-black cool ground, ice
- *                    cyan hairlines, tight radii, wide-tracked mono labels.
- *                    Precision and negative space carry the look, not glow.
- *   crt           , phosphor green readout. Scanlines, bloom, zero radius.
- *
- * One rule survives both: red is not decoration. It appears when something
- * is urgent and nowhere else, so it still stops a person when it shows up.
- *
- * Fonts are a system stack today. Dropping real faces in later is one
- * @font-face block in this file plus the files under ui/assets/fonts.
- */
+/* Vitals Local tokens. */
 
 :root {
-  /* ---- Type ----
-   * Twenty languages across seven scripts rules out a display face with
-   * strong opinions. The character comes from weight, tracking, and the
-   * mono face carrying every measured value.
-   */
+  /* Type ---- Twenty languages across seven scripts rules out a display face with strong
+     opinions. */
   --font-ui: system-ui, -apple-system, "Segoe UI Variable Display", "Segoe UI",
              Roboto, "Noto Sans", "Noto Sans Arabic", "Noto Sans Bengali",
              "Noto Sans Thai", "Noto Sans KR", "Noto Sans SC", sans-serif;
@@ -54,7 +36,7 @@
 
   --measure: 60ch;
 
-  /* ---- Space, base 4 ---- */
+  /* Space, base 4 */
   --s-1: 4px;  --s-2: 8px;  --s-3: 12px; --s-4: 16px;
   --s-5: 24px; --s-6: 32px; --s-7: 48px; --s-8: 64px; --s-9: 96px;
 
@@ -63,11 +45,11 @@
   --card-pad: var(--s-5);
   --tap: 44px;
 
-  /* Severity rule thickness. The primary channel: it survives colour loss. */
+  /* Severity rule thickness. */
   --rule-w-soon: 3px;
   --rule-w-now: 5px;
 
-  /* ---- Motion ---- */
+  /* Motion */
   --d-instant: 90ms;
   --d-quick: 160ms;
   --d-settle: 240ms;
@@ -78,111 +60,48 @@
   --z-nav: 60; --z-modal: 80;
 }
 
-/* ================= med, default ================= */
-:root[data-theme="neon"] {
-  color-scheme: dark;
-
-  --bg: #06090C;
-  --bg-deep: #030507;
-  --panel: rgb(15 22 28 / 0.72);
-  --panel-solid: #0E161C;
-  --panel-raised: #142029;
-  --inset: #0A1116;
-
-  --ink: #E9F3F7;
-  --ink-mid: #A9BEC8;
-  --ink-dim: #7C9099;   /* 4.99:1 on panel-raised, 6.0:1 on bg */
-
-  --accent: #4DE1FF;
-  --accent-deep: #1B7C96;
-  --accent-wash: rgb(77 225 255 / 0.09);
-
-  --hair: rgb(140 205 226 / 0.34);        /* 2.2:1, for dividers inside a panel */
-  --hair-edge: rgb(150 210 230 / 0.52);   /* 3.2:1, for the edge of a control */
-  --hair-strong: rgb(165 220 238 / 0.7);  /* 4.6:1, for a hovered or active edge */
-
-  --sev-soon: #FFB020;
-  --sev-soon-wash: rgb(255 176 32 / 0.1);
-  --sev-now: #FF4D4D;
-  --sev-now-wash: rgb(255 77 77 / 0.12);
-  --sev-now-ink: #1A0405;
-
-  --focus: var(--accent);
-  --focus-ring: 0 0 0 1px var(--bg), 0 0 0 3px var(--accent);
-
-  --r-sm: 2px; --r-md: 4px; --r-lg: 8px; --r-pill: 999px;
-  --hairline: 1px;
-
-  /* The primary action is the accent filled; everything else is outline.
-     One filled thing per screen keeps the eye where the flow goes next. */
-  --action-bg: var(--accent);
-  --action-ink: #04161C;
-  --action-bg-hover: #7EEBFF;
-  --action-quiet-bg: transparent;
-  --action-quiet-ink: var(--ink);
-  --shadow-card: 0 1px 0 rgb(122 196 219 / 0.06) inset;
-
-  --overlay: none;
-  --bloom: 0 0 12px rgb(77 225 255 / 0.35);
-  --bloom-soft: 0 0 24px rgb(77 225 255 / 0.14);
-  --label-transform: uppercase;
-  --label-track: var(--tr-hud);
-  --corner-len: 10px;
-}
-
-/* ================= kawaii, the default =================
- *
- * Warm cream, soft rose, generous corners. The register is a Japanese cute
- * stationery aisle rather than an instrument panel, so the glow, the
- * scanlines, the viewfinder ticks and the tracked uppercase all switch off
- * and the radii open right up.
- *
- * Two things do not soften. Red still means urgency and appears nowhere else,
- * and every ink here clears the contrast floor on cream, which is why the
- * rose is a deep dusty sakura rather than the pale one it fills with.
- */
+/* Light: a printed leaflet. */
 :root,
-:root[data-theme="kawaii"] {
+:root[data-theme="light"] {
   color-scheme: light;
 
-  --bg: #FBF6EE;
-  --bg-deep: #F5EEE2;
+  --bg: #FFFFFF;
+  --bg-deep: #F4F5F6;
   --panel: #FFFFFF;
   --panel-solid: #FFFFFF;
-  --panel-raised: #FBF5EC;
-  --inset: #F5EEE2;
+  --panel-raised: #F7F8F9;
+  --inset: #F1F3F5;
 
-  --ink: #463C34;       /* 9.98:1 on the cream */
-  --ink-mid: #61584F;   /* 6.1:1 */
-  --ink-dim: #736860;   /* 5.0:1 on cream, 4.7:1 on the deeper bands */
+  --ink: #14181D;       /* 17.9:1 on white */
+  --ink-mid: #3D4650;   /* 9.8:1 */
+  --ink-dim: #5A636D;   /* 6.2:1 */
 
-  --accent: #A8505A;    /* 4.9:1, so it can carry text as well as fills */
-  --accent-deep: #8F4049;
-  --accent-wash: rgb(216 139 139 / 0.16);   /* the pale sakura, for fills only */
+  --accent: #1F5FA8;    /* 6.6:1, carries text */
+  --accent-deep: #174A84;
+  --accent-wash: #EAF1F9;
 
-  --hair: rgb(70 60 52 / 0.12);   /* a divider inside a card, decorative */
-  --hair-edge: #8C8378;           /* 3.2:1, the edge of a control */
-  --hair-strong: #6F665C;         /* 4.6:1, a hovered or active edge */
+  --hair: #DDE1E5;
+  --hair-edge: #8A939C;   /* 3.2:1, the edge of a control */
+  --hair-strong: #5A636D;
 
-  --sev-soon: #9C5B22;
-  --sev-soon-wash: rgb(240 176 96 / 0.18);
+  --sev-soon: #8A4B00;
+  --sev-soon-wash: #FFF3E0;
   --sev-now: #B3261E;
-  --sev-now-wash: rgb(196 60 48 / 0.10);
+  --sev-now-wash: #FDECEA;
   --sev-now-ink: #FFFFFF;
 
   --focus: var(--accent);
   --focus-ring: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent);
 
-  /* The corners are the loudest thing about this theme. */
-  --r-sm: 10px; --r-md: 16px; --r-lg: 22px; --r-pill: 999px;
+  --r-sm: 2px; --r-md: 3px; --r-lg: 4px; --r-pill: 3px;
   --hairline: 1px;
 
   --action-bg: var(--accent);
   --action-ink: #FFFFFF;
-  --action-bg-hover: #93444E;
+  --action-bg-hover: var(--accent-deep);
   --action-quiet-bg: transparent;
   --action-quiet-ink: var(--ink);
-  --shadow-card: 0 1px 2px rgb(70 60 52 / 0.05), 0 6px 16px rgb(70 60 52 / 0.05);
+  --shadow-card: none;
 
   --overlay: none;
   --bloom: none;
@@ -190,63 +109,60 @@
   --label-transform: none;
   --label-track: var(--tr-normal);
   --corner-len: 0px;
+
+  --font-mono: var(--font-ui);
 }
 
-/* ================= crt, retro green readout ================= */
-:root[data-theme="crt"] {
+/* Dark: the same leaflet for reading at night. */
+:root[data-theme="dark"] {
   color-scheme: dark;
 
-  --bg: #030603;
-  --bg-deep: #010301;
-  --panel: rgb(7 18 9 / 0.82);
-  --panel-solid: #071209;
-  --panel-raised: #0C1D0F;
-  --inset: #050D06;
+  --bg: #15181C;
+  --bg-deep: #101316;
+  --panel: #15181C;
+  --panel-solid: #15181C;
+  --panel-raised: #1C2025;
+  --inset: #1E2328;
 
-  --ink: #CDF7D8;
-  --ink-mid: #8AD69E;
-  --ink-dim: #5FA271;   /* 5.8:1 on panel-raised */
+  --ink: #ECEEF0;       /* 15.6:1 */
+  --ink-mid: #C3C8CE;   /* 10.7:1 */
+  --ink-dim: #9AA2AB;   /* 6.9:1 */
 
-  --accent: #00FF66;
-  --accent-deep: #0A7D38;
-  --accent-wash: rgb(0 255 102 / 0.1);
+  --accent: #7FB2EC;    /* 7.6:1 */
+  --accent-deep: #A3C8F2;
+  --accent-wash: #1C2A3A;
 
-  --hair: rgb(0 255 102 / 0.3);
-  --hair-edge: rgb(0 255 102 / 0.45);
-  --hair-strong: rgb(90 255 150 / 0.75);
+  --hair: #2C3238;
+  --hair-edge: #6B747E;   /* 3.4:1 */
+  --hair-strong: #9AA2AB;
 
-  --sev-soon: #FFC53D;
-  --sev-soon-wash: rgb(255 197 61 / 0.12);
-  --sev-now: #FF5B4A;
-  --sev-now-wash: rgb(255 91 74 / 0.14);
-  --sev-now-ink: #140301;
+  --sev-soon: #F0B45A;
+  --sev-soon-wash: #2E2414;
+  --sev-now: #FF7B72;
+  --sev-now-wash: #33191A;
+  --sev-now-ink: #15181C;
 
-  --focus: #B6FFD0;
-  --focus-ring: 0 0 0 1px var(--bg), 0 0 0 2px var(--focus);
+  --focus: var(--accent);
+  --focus-ring: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent);
 
-  --r-sm: 0px; --r-md: 0px; --r-lg: 0px; --r-pill: 0px;
+  --r-sm: 2px; --r-md: 3px; --r-lg: 4px; --r-pill: 3px;
   --hairline: 1px;
 
   --action-bg: var(--accent);
-  --action-ink: #021007;
-  --action-bg-hover: #B6FFD0;
+  --action-ink: #0E1A28;
+  --action-bg-hover: var(--accent-deep);
   --action-quiet-bg: transparent;
   --action-quiet-ink: var(--ink);
   --shadow-card: none;
 
-  --overlay: repeating-linear-gradient(
-      to bottom,
-      rgb(0 255 102 / 0.055) 0 1px,
-      transparent 1px 3px);
-  --bloom: 0 0 10px rgb(0 255 102 / 0.5);
-  --bloom-soft: 0 0 28px rgb(0 255 102 / 0.2);
-  --label-transform: uppercase;
-  --label-track: var(--tr-hud);
-  --corner-len: 14px;
+  --overlay: none;
+  --bloom: none;
+  --bloom-soft: none;
+  --label-transform: none;
+  --label-track: var(--tr-normal);
+  --corner-len: 0px;
 
-  --font-ui: var(--font-mono);
-  --font-body: var(--font-mono);
-  --font-display: var(--font-mono);
+  --font-mono: var(--font-ui);
 }
 
 /* Uppercase is unreadable in several phase-1 scripts. */
@@ -256,8 +172,7 @@
   --label-track: var(--tr-normal);
 }
 
-/* The Settings toggle stamps data-motion and must beat the media query
-   in both directions. */
+/* The Settings toggle stamps data-motion and must beat the media query in both directions. */
 @media (prefers-reduced-motion: reduce) {
   :root:not([data-motion="full"]) {
     --d-instant: 1ms; --d-quick: 1ms; --d-settle: 1ms;

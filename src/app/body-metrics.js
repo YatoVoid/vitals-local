@@ -1,10 +1,4 @@
-/* Body measurements.
- *
- * BMI is a population screening tool, not a description of an individual, so
- * every figure is reported alongside its limits. Waist to height ratio tracks
- * abdominal fat, which carries the metabolic risk, and needs no chart: the
- * threshold is 0.5 for adults regardless of height or sex.
- */
+// Body measurements.
 
 import { profile, settings, referenceEnergy } from './store.js';
 import { isUS, kgToLb as toLb, cmToIn as toIn } from './units.js';
@@ -21,11 +15,7 @@ export const BMI_BANDS = [
 const SEVERITY = { under: 'soon', healthy: 'none', over: 'none',
                    obese1: 'soon', obese2: 'soon', obese3: 'soon' };
 
-/**
- * Everything derivable from the profile.
- * Returns null when height and weight are not both known, rather than
- * guessing, because a made up baseline is worse than no baseline.
- */
+// Everything derivable from the profile.
 export function metrics() {
   const p = profile.get();
   const { heightCm, weightKg, age, sex, waistCm, activity } = p;
@@ -35,7 +25,7 @@ export function metrics() {
   const bmi = weightKg / (m * m);
   const band = BMI_BANDS.find(b => bmi < b.max);
 
-  /* The weight range that puts BMI between 18.5 and 25 at this height. */
+  // The weight range that puts BMI between 18.5 and 25 at this height.
   const lowKg = 18.5 * m * m;
   const highKg = 24.9 * m * m;
   const toHealthy = bmi < 18.5 ? lowKg - weightKg
@@ -70,30 +60,8 @@ export function metrics() {
   };
 }
 
-/* ---- Energy target ----
- *
- * Maintenance is what the equation gives, and on its own it answers only one
- * question: what holds this weight. Someone above the healthy range for their
- * height, or wanting to be heavier, was still shown maintenance, so the number
- * was for a goal they had not chosen.
- *
- * A goal is asked for and the adjustment is applied to maintenance:
- *
- *   Losing   500 kcal below, which is about half a kilo a week against the
- *            7700 kcal a kilo of body fat holds. NICE and the NHS describe
- *            600 kcal deficit diets for the same half kilo, so this sits at
- *            the gentler end of the range they use.
- *   Holding  maintenance, unchanged.
- *   Gaining  400 kcal above, for roughly a quarter to half a kilo a week. The
- *            evidence for a surplus size is thinner than for a deficit, so
- *            this is deliberately modest.
- *
- * The floor is the part worth being careful with. US obesity guidance puts
- * supervised low calorie diets at 1000 to 1200 kcal for women and 1200 to
- * 1600 for men, so a target is never printed below 1200 or 1500. Where the
- * deficit would go under, the floor is used and the screen says so rather
- * than quietly showing a different number than the arithmetic implies.
- */
+// Energy target Maintenance is what the equation gives, and on its own it answers only one
+// question: what holds this weight.
 export const GOALS = [
   { id: 'lose', label: 'Lose weight', delta: -500 },
   { id: 'hold', label: 'Stay as I am', delta: 0 },
@@ -102,18 +70,10 @@ export const GOALS = [
 
 const FLOOR = { Male: 1500, other: 1200 };
 
-/** Roughly the energy in a kilogram of body fat, the usual planning figure. */
+// Roughly the energy in a kilogram of body fat, the usual planning figure.
 const KCAL_PER_KG = 7700;
 
-/**
- * The daily energy target, with everything needed to show the working.
- *
- * Null when maintenance cannot be worked out, so the caller falls back to a
- * reference intake rather than this inventing one.
- *
- * @param {object} m the result of metrics()
- * @param {string} goalId one of GOALS
- */
+// The daily energy target, with everything needed to show the working.
 export function energyTarget(m, goalId = 'hold') {
   if (!m?.maintenance) return null;
   const goal = GOALS.find(g => g.id === goalId) ?? GOALS[1];
@@ -123,52 +83,37 @@ export function energyTarget(m, goalId = 'hold') {
   const kcal = Math.max(wanted, floor);
   const floored = kcal !== wanted;
 
-  /* What that pace actually comes to, from the target that will be used
-     rather than the one asked for, so a floored target does not keep
-     promising the rate it no longer delivers. */
+  // What that pace actually comes to, from the target that will be used rather than the one
+  // asked for.
   const perWeekKg = Math.round(((m.maintenance - kcal) * 7 / KCAL_PER_KG) * 10) / 10;
 
   return { kcal, goal, floored, floor, perWeekKg, maintenance: m.maintenance };
 }
 
-/**
- * Protein for the day, in grams.
- *
- * 0.8 g per kilogram is the reference intake, the amount that prevents
- * deficiency rather than the amount that is best. Losing weight raises it:
- * protein is what holds onto muscle while the rest comes off, which is the
- * whole difference between losing fat and losing both.
- */
+// Protein for the day, in grams.
 export function proteinTarget(m, goalId = 'hold') {
   if (!m?.weightKg) return null;
   const perKg = goalId === 'lose' ? 1.2 : 0.8;
   return { grams: Math.round(m.weightKg * perKg), perKg };
 }
 
-/** The goal on the profile, defaulting to holding rather than assuming one. */
+// The goal on the profile, defaulting to holding rather than assuming one.
 export function currentGoal() {
   const id = profile.get().goal;
   return GOALS.find(g => g.id === id) ?? GOALS.find(g => g.id === 'hold');
 }
 
-/**
- * The energy figure a day is measured against, for any screen that shows one.
- *
- * A worked out target when the profile carries enough to work one out, and a
- * published reference intake when it does not. Nothing is stored: it follows
- * the profile, so editing a weight moves it without anything having to
- * remember to write it back.
- */
+// The energy figure a day is measured against, for any screen that shows one.
 export function dailyEnergy() {
   return energyTarget(metrics(), currentGoal().id)?.kcal ?? referenceEnergy();
 }
 
-/** The protein figure for the day, or null when weight is unknown. */
+// The protein figure for the day, or null when weight is unknown.
 export function dailyProtein() {
   return proteinTarget(metrics(), currentGoal().id);
 }
 
-/** Units, so the same numbers read correctly for a US profile. */
+// Units, so the same numbers read correctly for a US profile.
 export function format(m) {
   const us = isUS();
   const kgToLb = k => Math.round(toLb(k));
@@ -186,10 +131,7 @@ export function format(m) {
   };
 }
 
-/**
- * The sentence to print under the number. Written as what the measurement
- * describes rather than as a verdict about the person.
- */
+// The sentence to print under the number.
 export function readOut(m) {
   const f = format(m);
   if (m.direction === 'none') {
@@ -208,7 +150,7 @@ export function readOut(m) {
        + `you are. That gap is the arithmetic, not a target anyone has to hit.`;
 }
 
-/** What BMI cannot see. Printed alongside, never hidden behind a tap. */
+// What BMI cannot see.
 export const BMI_CAVEATS = [
   'BMI cannot tell muscle from fat. A heavily trained person can measure as '
   + 'overweight while carrying very little fat.',
@@ -222,7 +164,7 @@ export const BMI_CAVEATS = [
   + 'number among several rather than a grade.',
 ];
 
-/** Waist to height is the one line summary worth knowing. */
+// Waist to height is the one line summary worth knowing.
 export const WHTR_NOTE =
   'Keeping your waist under half your height is a simple check that tracks '
   + 'abdominal fat, and it uses the same threshold whatever your height or '

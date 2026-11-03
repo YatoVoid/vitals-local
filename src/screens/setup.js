@@ -1,6 +1,4 @@
-/* First run: language, then country, then the profile fields the rest of the
- * app needs. Language leads because every screen after it has to be readable.
- */
+// First run: language, then country, then the profile fields the rest of the app needs.
 
 import { el, eyebrow, fieldLabel, panel, button, row, rows, segmented, numberOrNull } from '../app/ui.js';
 import { settings, profile, applySettings } from '../app/store.js';
@@ -8,9 +6,7 @@ import { display as unitDisplay, store as unitStore, units as unitWords } from '
 import * as i18n from '../i18n/index.js';
 import { LANGUAGES, preferred } from '../i18n/languages.js';
 
-/* The languages offered up front. The rest are one tap further on, through
-   the full picker in Settings. The browser's own preference is promoted into
-   this set so it is never buried. */
+// The languages offered up front.
 const SUGGESTED = ['en', 'es', 'zh-Hans', 'hi', 'ar', 'fr', 'ru', 'pt', 'bn',
   'ja', 'de', 'ur', 'id', 'tr', 'ko', 'it', 'th', 'pl', 'az', 'el'];
 
@@ -31,7 +27,7 @@ export function renderSetup(screen, { go, live }) {
     screen.replaceChildren();
     const s = settings.get();
 
-    /* A dot per step. Position carries progress, the label names it. */
+    // A dot per step.
     const dots = el('div', 'dots');
     STEPS.forEach((_, i) => {
       const d = el('i', 'dot');
@@ -57,16 +53,16 @@ export function renderSetup(screen, { go, live }) {
           live.textContent = `Setting up ${meta.english}`;
           settings.set({ language: code });
           applySettings();
-          /* Called from inside the tap: this is the only moment the browser
-             will fetch a translation model. */
+          // Called from inside the tap: this is the only moment the browser will fetch a
+          // translation model.
           await i18n.setLanguage(code);
           busyLang = null;
           live.textContent = `Language set to ${meta.english}`;
           draw();
           window.dispatchEvent(new CustomEvent('vitals:language'));
         });
-        /* The label is in its own script and must not be translated into the
-           language being left behind. */
+        // The label is in its own script and must not be translated into the language being
+        // left behind.
         b.setAttribute('translate', 'no');
         b.setAttribute('lang', code);
         if (meta.dir) b.setAttribute('dir', meta.dir);

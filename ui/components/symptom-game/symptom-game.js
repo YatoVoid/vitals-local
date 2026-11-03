@@ -1,9 +1,4 @@
-/* Symptom game, renderer.
- *
- * One Stage holds one step at a time. Every transition is a transform and an
- * opacity change, so the compositor does the work and a mid-range phone keeps
- * its frame budget. Nothing here reads layout during an animation.
- */
+// Symptom game, renderer.
 
 import { REGIONS, PAIN_TYPES } from './regions.js';
 import { renderBody, VIEWS, ZOOMS, zoomById, BODY_W, BODY_H } from './body-map.js';
@@ -17,9 +12,7 @@ import { savedPlace } from '../../../src/app/weather.js';
 import { settings } from '../../../src/app/store.js';
 import { promptFor } from '../../../src/triage/engine.js';
 
-/* The country setting names a labelling region rather than a place. Only the
-   ones that are a single country can point at an emergency number; "Europe,
-   general" cannot, and says so instead of guessing. */
+// The country setting names a labelling region rather than a place.
 const isoForSetting = code => (['AZ', 'US', 'GR'].includes(code) ? code : null);
 
 const el = (tag, cls, text) => {
@@ -37,7 +30,7 @@ export function mount(root) {
 
   const stageHost = el('div', 'stage-host');
 
-  // Status strip. Reads as instrumentation and carries the live region.
+  // Status strip.
   const hud = el('div', 'hud');
   hud.append(el('i', 'hud__dot'), el('span', null, 'Symptom scan'));
   const hudState = el('span', 'hud__val hud__spacer', 'Ready');
@@ -60,24 +53,21 @@ export function mount(root) {
   root.append(hud, meter, stageHost, sheetHost, live);
   enableDragScroll(root);
 
-  /* Some controls own their own visual state while dragging, so a full
-     redraw mid-gesture would fight the finger. This records the change
-     without repainting. */
+  // Some controls own their own visual state while dragging, so a full redraw mid-gesture would
+  // fight the finger.
   function dispatchQuiet(event) {
     state = send(state, event);
   }
 
-  /* Move to the next question without a second tap. A single choice question
-     has nothing left to say once it is answered, so waiting for Next only
-     adds a step. Cancelled if the person changes their mind in the window. */
+  // Move to the next question without a second tap.
   let advanceTimer = null;
   function advanceSoon(ms = 280) {
     clearTimeout(advanceTimer);
     advanceTimer = setTimeout(() => dispatch({ type: 'advance' }), ms);
   }
 
-  /* Multi select has no single right moment to move on, so the next action
-     is brought to the thumb instead of the person hunting for it. */
+  // Multi select has no single right moment to move on, so the next action is brought to the
+  // thumb instead of the person hunting for it.
   function scrollNextIntoView() {
     requestAnimationFrame(() => {
       stageHost.querySelector('.stage__next')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
@@ -85,9 +75,7 @@ export function mount(root) {
   }
 
   function dispatch(event) {
-    /* Taken before anything renders. Drawing the stage detaches whatever was
-       focused, so by the time a sheet is built the active element is already
-       the document and there is nothing left to hand focus back to. */
+    // Taken before anything renders.
     lastFocusMemo = rememberFocus() ?? lastFocusMemo;
     const next = send(state, event);
     if (next === state) return;
@@ -112,7 +100,7 @@ export function mount(root) {
     drawSheet();
   }
 
-  /* ---- Stage: the sliding step container ---- */
+  // Stage: the sliding step container
   function drawStage(animate) {
     const panel = el('section', 'stage');
     panel.dataset.stage = state.stage;
@@ -159,8 +147,7 @@ export function mount(root) {
     panel.appendChild(bar);
   }
 
-  /* A reticle in viewBox units. Sized against the crop so it stays the same
-     size on screen however far the figure is zoomed. */
+  // A reticle in viewBox units.
   function markAt(x, y, n, crop) {
     const NS = 'http://www.w3.org/2000/svg';
     const g = document.createElementNS(NS, 'g');
@@ -181,11 +168,11 @@ export function mount(root) {
     return g;
   }
 
-  /* ---- A) BodyMap, four views ---- */
+  // A) BodyMap, four views
   function bodySelect(panel) {
     header(panel, 'Step 1', 'Where does it hurt?');
 
-    // Four views, one control. Labels are the view, not an instruction.
+    // Four views, one control.
     const views = el('div', 'views views--hud');
     views.setAttribute('role', 'group');
     views.setAttribute('aria-label', 'Body view');
@@ -202,9 +189,7 @@ export function mount(root) {
     });
     panel.appendChild(views);
 
-    /* Area zoom. On a phone the whole figure is height-bound, which leaves
-       the limb zones around 30px across. Cropping to one area spends the
-       width that was going spare and lifts them past the 44px floor. */
+    // Area zoom.
     const areas = el('div', 'zooms');
     areas.setAttribute('role', 'group');
     areas.setAttribute('aria-label', 'Zoom to an area');
@@ -243,21 +228,16 @@ export function mount(root) {
         zone.setAttribute('aria-pressed', 'true');
       }
       // A tap records the exact spot, not just the region it fell in.
-      // Coordinates are normalised against the viewBox so a mark drawn on a
-      // phone lands in the same place on a tablet.
       const pick = ev => {
         const box = svg.getBoundingClientRect();
-        // A pointer gives a real spot. Keyboard activation reports 0,0, which
-        // would drop the mark off the figure, so fall back to the middle of
-        // the region that was chosen.
+        // A pointer gives a real spot.
         const zoneBox = zone.getBoundingClientRect();
         let cx = zoneBox.left + zoneBox.width / 2;
         let cy = zoneBox.top + zoneBox.height / 2;
         if (ev && ev.clientX > 0 && ev.clientY > 0) { cx = ev.clientX; cy = ev.clientY; }
 
-        /* Recorded against the whole-body space, not against the crop on
-           screen, so a mark made while zoomed sits on the same spot when the
-           figure is zoomed back out. */
+        // Recorded against the whole-body space, not against the crop on screen, so a mark
+        // made.
         let x = 0.5, y = 0.5;
         if (box.width && box.height) {
           const inCrop = {
@@ -288,15 +268,11 @@ export function mount(root) {
     wrap.appendChild(svg);
     wrap.appendChild(el('i', 'bodymap__scan'));
 
-    /* Shapes outside the crop are clipped but still in the tree, so without
-       this they stay in the tab order and a keyboard lands on a zone nobody
-       can see. getBBox needs the element rendered, which is why this runs
-       after the append rather than inside renderBody. */
+    // Shapes outside the crop are clipped but still in the tree, so without this they stay in
+    // the tab order and a keyboard lands on a zone nobody can see.
     if (state.zoom !== 'all') {
       const [cx, cy, cw, ch] = crop;
-      /* Deferred a frame: getBBox reports zeros while the svg is still
-         detached, which reads as "outside the crop" for every shape and
-         would take the whole figure out of the tab order. */
+      // Deferred a frame: getBBox reports zeros while the svg is still detached.
       requestAnimationFrame(() => {
         if (!svg.isConnected) return;
         svg.querySelectorAll('.zone').forEach(zone => {
@@ -313,14 +289,7 @@ export function mount(root) {
       });
     }
 
-    /* Reticles are drawn inside the svg, in viewBox units. An overlay div
-       cannot be trusted here: the svg letterboxes its own contents, so a
-       percentage of the element box is not a percentage of the figure, and
-       the mark drifts by the size of the letterbox. Inside, the browser
-       applies the same transform to marks and shapes alike.
-
-       Points are held in whole-body coordinates and mapped into the current
-       crop, so a mark made while zoomed keeps its spot when zoomed out. */
+    // Reticles are drawn inside the svg, in viewBox units.
     state.points.filter(pt => pt.view === state.view).forEach((pt, i) => {
       const ax = pt.x * BODY_W;
       const ay = pt.y * BODY_H;
@@ -340,15 +309,11 @@ export function mount(root) {
     }
   }
 
-  /* ---- B) PainTypeSelector, a dial rather than a list ---- */
+  // B) PainTypeSelector, a dial rather than a list
   function painTypes(panel) {
     header(panel, labelFor(state.region), 'What does it feel like?');
 
-    /* Eight wedges to start, twelve on request. Twelve at a size anyone can
-       read overlap their neighbours: the label runs radially, so the room it
-       has is set by the width of the band, and the gap between one label and
-       the next by the angle. Eight gives both. The four held back are the
-       less common qualities, and any already picked stay on the ring. */
+    // Eight wedges to start, twelve on request.
     const showAll = state.showExtraPain
       || PAIN_TYPES.some(t => t.extra && state.painTypes.includes(t.id));
     const types = showAll ? PAIN_TYPES : PAIN_TYPES.filter(t => !t.extra);
@@ -394,7 +359,7 @@ export function mount(root) {
     if (!MULTI_SELECT_PAIN) panel.dataset.select = 'single';
   }
 
-  /* ---- C) The question ladder, one adaptive step at a time ---- */
+  // C) The question ladder, one adaptive step at a time
   function contextStep(panel) {
     const q = state.question;
     if (!q) { dispatch({ type: 'advance' }); return; }
@@ -439,7 +404,7 @@ export function mount(root) {
     panel.appendChild(stop);
   }
 
-  /* ---- D) OutcomeCardsStack + RedFlagCard ---- */
+  // D) OutcomeCardsStack + RedFlagCard
   function outcome(panel) {
     const o = state.outcome;
 
@@ -519,9 +484,7 @@ export function mount(root) {
     const ul = el('ul', 'card__list');
     items.forEach(t => {
       const li = el('li');
-      /* An item can be a plain sentence or a name with an explanation. The
-         second kind gets the name set apart, because comma-splicing a label
-         onto a sentence reads as one run-on line. */
+      // An item can be a plain sentence or a name with an explanation.
       if (typeof t === 'object' && t !== null) {
         li.append(el('b', 'card__term', t.term), el('span', null, t.note));
       } else {
@@ -552,10 +515,8 @@ export function mount(root) {
     b.addEventListener('click', () => dispatch({ type: 'open_sheet', sheet: 'urgent' }));
     c.appendChild(b);
 
-    /* On a long result the flag can land below the fold, where the one card
-       that had to be read is the one nobody sees. Focus is left alone: the
-       alert role announces it, and taking focus would move the caret out
-       from under someone mid-answer. */
+    // On a long result the flag can land below the fold, where the one card that had to be read
+    // is the one nobody sees.
     requestAnimationFrame(() => {
       if (!c.isConnected) return;
       const still = matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -565,7 +526,7 @@ export function mount(root) {
     return c;
   }
 
-  /* ---- E) RefinementPanel ---- */
+  // E) RefinementPanel
   function refinement(panel) {
     header(panel, state.outcome.region_label, 'Why it is ranked this way');
     const list = el('ul', 'reasons');
@@ -587,12 +548,9 @@ export function mount(root) {
     });
   }
 
-  /* ---- BodyRegionBottomSheet and friends ---- */
+  // BodyRegionBottomSheet and friends
 
-  /* What had focus when a sheet opened, so it can be handed back on close.
-     Stored by identity, not by node: opening a sheet re-renders the stage, so
-     the element that was focused has usually been replaced by the time the
-     sheet closes and a node reference would be stale. */
+  // What had focus when a sheet opened, so it can be handed back on close.
   let focusBeforeSheet = null;
   let lastFocusMemo = null;
 
@@ -638,8 +596,7 @@ export function mount(root) {
     sheet.setAttribute('role', 'dialog');
     sheet.setAttribute('aria-modal', 'true');
 
-    /* A dialog closes on Escape and keeps the tab loop inside itself. Both
-       are assumed by anyone driving this without a pointer. */
+    // A dialog closes on Escape and keeps the tab loop inside itself.
     sheet.addEventListener('keydown', ev => {
       if (ev.key === 'Escape') {
         ev.preventDefault();
@@ -694,8 +651,7 @@ export function mount(root) {
         const existing = openEpisodes().find(e => e.region === state.region);
 
         if (existing) {
-          /* Already watching this spot. Adding a second record for the same
-             thing splits the history in half and neither half is useful. */
+          // Already watching this spot.
           const since = new Date(existing.startedAt).toLocaleDateString();
           sheet.appendChild(el('h3', 'sheet__head', 'You are already tracking this'));
           sheet.appendChild(el('p', 'sheet__note',
@@ -763,10 +719,7 @@ export function mount(root) {
         sheet.dataset.critical = '';
         sheet.appendChild(el('h3', 'sheet__head', 'Go now. Do not drive yourself.'));
 
-        /* The number to dial is the whole point of this sheet. It comes from
-           the place already chosen for weather, falling back to the country
-           in Settings, and says so plainly when neither names a country the
-           table covers. */
+        // The number to dial is the whole point of this sheet.
         const place = savedPlace();
         const iso = place?.iso ?? isoForSetting(settings.get().country);
         const line = emergencyLine(iso, place?.country);
@@ -806,16 +759,14 @@ export function mount(root) {
   return { dispatch, getState: () => state };
 }
 
-/* A tap gets an acknowledgement that costs one compositor frame. */
+// A tap gets an acknowledgement that costs one compositor frame.
 function pulse(node) {
   node.classList.remove('pulse');
   void node.offsetWidth;
   node.classList.add('pulse');
 }
 
-/* The scan itself, kept alongside the episode. IndexedDB lands with the
- * storage layer; this writes the same record shape in the meantime.
- */
+// The scan itself, kept alongside the episode.
 function saveChain(s, note) {
   const record = {
     saved_at: new Date().toISOString(),

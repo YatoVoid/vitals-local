@@ -1,8 +1,4 @@
-/* Tracked pain over time.
- *
- * The list shows open episodes. Opening one charts the readings, reports what
- * changed, and offers a single control to add today's number.
- */
+// Tracked pain over time.
 
 import { el, eyebrow, fieldLabel, panel, button, row, rows } from '../app/ui.js';
 import * as episodes from '../app/episodes.js';
@@ -11,7 +7,7 @@ import { FOLLOW_FLAGS, flagAdvice } from '../app/episodes.js';
 const fmtDate = iso => new Date(iso).toLocaleDateString([], { month: 'short', day: 'numeric' });
 const fmtTime = iso => new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-/* ---------- List ---------- */
+// List
 export function renderEpisodes(screen, { go }) {
   const list = episodes.all();
   screen.appendChild(eyebrow('Tracked pain'));
@@ -59,7 +55,7 @@ export function renderEpisodes(screen, { go }) {
   screen.appendChild(why);
 }
 
-/* ---------- One episode ---------- */
+// One episode
 export function renderEpisode(id) {
   return function render(screen, { go, live }) {
     const draw = () => {
@@ -75,8 +71,7 @@ export function renderEpisode(id) {
       screen.appendChild(eyebrow(`Started ${fmtDate(e.startedAt)}`));
       screen.appendChild(el('h1', null, e.regionLabel ?? e.region));
 
-      /* The chart. Position carries the trend; the numbers are printed
-         underneath so it never relies on reading a slope. */
+      // The chart.
       if (a && a.count >= 2) {
         screen.appendChild(chart(e));
       }
@@ -158,7 +153,7 @@ export function renderEpisode(id) {
   };
 }
 
-/* A reading is a number and, optionally, what changed. */
+// A reading is a number and, optionally, what changed.
 function readingForm(e, done) {
   const wrap = el('div', 'reading');
   let value = e.readings.at(-1)?.intensity ?? 5;
@@ -204,8 +199,7 @@ function readingForm(e, done) {
   return wrap;
 }
 
-/* A line chart drawn from the readings. No library, no axis labels beyond
-   the two that matter. */
+// A line chart drawn from the readings.
 function chart(e) {
   const NS = 'http://www.w3.org/2000/svg';
   const W = 100, H = 34;
@@ -241,9 +235,8 @@ function chart(e) {
 
   box.appendChild(svg);
 
-  /* Both ends carry the same date until an episode has run past a day, which
-     reads as a broken axis. Show clock times in that case, since that is what
-     actually separates the readings. */
+  // Both ends carry the same date until an episode has run past a day, which reads as a broken
+  // axis.
   const first = e.readings[0].at;
   const last = e.readings.at(-1).at;
   const timed = episodes.chartIsTimed(e);

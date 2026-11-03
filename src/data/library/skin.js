@@ -1,9 +1,4 @@
-/* Skin, sun and sunscreen.
- *
- * Filters are described by what they cover and how they behave. No brands and
- * no product recommendations. Approved filter lists differ by region, which
- * matters when reading a label bought abroad.
- */
+// Skin, sun and sunscreen.
 
 export const SKIN = [
   {

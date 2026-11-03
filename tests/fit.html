@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" data-theme="kawaii">
+<html lang="en" data-theme="light">
 <head>
 <meta charset="utf-8">
 <title>Fit check</title>
@@ -66,7 +66,7 @@ const ROUTES = ['#/setup','#/home','#/body','#/track','#/track/diet','#/track/hy
 const frames = document.getElementById('frames');
 const out = document.getElementById('out');
 const status = document.getElementById('status');
-let theme = 'kawaii';
+let theme = 'light';
 let textSize = 'normal';
 let dir = 'ltr';
 
@@ -200,7 +200,7 @@ document.getElementById('dir').addEventListener('click', () => {
 });
 
 document.getElementById('theme').addEventListener('click', () => {
-  theme = { kawaii: 'neon', neon: 'crt', crt: 'kawaii' }[theme];
+  theme = { light: 'dark', dark: 'light' }[theme];
   document.documentElement.dataset.theme = theme;
   frames.querySelectorAll('iframe').forEach(f => {
     if (f.contentDocument) f.contentDocument.documentElement.dataset.theme = theme;

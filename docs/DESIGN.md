@@ -5,22 +5,21 @@ interface earns trust by being exact, not by being soothing.
 
 ## Themes
 
-Three themes share one skeleton. Layout, spacing and component structure never
-change between them; only colour, type, overlay and radius do.
+Two themes share one skeleton. Layout, spacing and component structure never
+change between them; only colour does.
 
 | Theme | `data-theme` | Character |
 |---|---|---|
-| Soft | `kawaii` (default) | Warm cream ground, white cards, dusty sakura accent, generous radii, sentence case. A Japanese cute register rather than an instrument panel: no glow, no scanlines, no viewfinder ticks. |
-| Blue neon | `neon` | Near-black cool ground, ice-cyan hairlines, tight radii, wide-tracked mono labels. Precision and negative space carry it, not glow. |
-| Retro CRT | `crt` | Phosphor green readout, scanlines, bloom, zero radius, mono throughout. |
+| Light | `light` (default) | A printed patient leaflet. White paper, black type, one clinical blue, hairline rules, small radii. |
+| Dark | `dark` | The same leaflet for reading at night. Charcoal ground, off-white type, a lighter blue. |
 
-`neon` was called `med` before the themes were named. Anyone holding the old
-value is moved across on read rather than reset, so a choice already made is
-not taken away.
+Older versions had three themes. A saved `kawaii` maps to `light`, and `med`,
+`neon` or `crt` map to `dark`, so a choice already made is moved across rather
+than reset.
 
-Adding a theme means defining the whole token set. A test compares each block
-against the others and fails on anything missing, because a half defined theme
-renders as a half styled screen rather than as an error.
+Adding a theme means defining the whole token set. A test compares the blocks
+and fails on anything missing, because a half defined theme renders as a half
+styled screen rather than as an error.
 
 **Red is reserved for urgency and appears nowhere else.** This is why red was
 rejected as an accent: if red is ambient chrome, a red-flag card can no longer
@@ -31,10 +30,9 @@ never redefine colour.
 
 ## Rules
 
-1. **Colour means severity.** The page is achromatic apart from the theme
-   accent on the active element. Amber means soon, red means now. This holds
-   on the light theme too, which is why its accent is a deep dusty rose rather
-   than the pale pink it fills with: an accent has to carry text.
+1. **Colour means severity.** The page is achromatic apart from the blue on
+   the active element. Amber means soon, red means now. The blue is dark
+   enough to carry text, not only fills.
 2. **No hardcoded values.** Every colour, radius, duration, space and size
    comes from a `var(--token)`. A genuine one-off carries a comment saying why
    no token fits.
@@ -48,27 +46,21 @@ never redefine colour.
    never on text mid-read, fully off under reduced motion.
 7. **Accessibility floor.** Visible focus, labelled controls, keyboard
    traversal, announced state changes, 4.5:1 for body text and 3:1 for large
-   text and rules, measured in all three themes.
+   text and rules, measured in both themes.
 
 ## Typography
 
-An eyebrow is decoration and sits quietly above a heading that carries the
-meaning: tracked mono, micro size.
+One system sans for everything, so the twenty supported languages render in
+a face the device already has. Numbers use tabular figures so columns of
+values line up.
 
-A field label is not decoration. It names something a person has to answer, so
-it reads at body size in the body face, at full brightness, in sentence case.
-Tracked mono at eleven pixels is a heads-up-display flourish and the wrong tool
-for a question.
+A field label names something a person has to answer, so it reads at body
+size, at full brightness, in sentence case. Small section labels above a
+heading stay plain sentence case too; nothing is tracked or set in uppercase.
 
-Tracked uppercase is switched off wholesale for scripts where it is unreadable,
-driven by `data-caps` on the root rather than a rule per component.
-
-### Fonts
-
-The mockups ask for Chakra Petch, Manrope and IBM Plex. Those are Google Fonts
-and the app must run with the network off, so the build uses a system stack. To
-change that, drop WOFF2 files into `ui/assets/fonts/` and add one `@font-face`
-block at the top of `tokens.css`. No other file changes.
+The app runs with the network off, so there are no web fonts. To add one,
+drop WOFF2 files into `ui/assets/fonts/` and add one `@font-face` block at the
+top of `tokens.css`. No other file changes.
 
 ## Writing
 
@@ -87,16 +79,6 @@ marks, sentence case headings.
 **Choice labels:** two words where possible. Enforced by the test suite.
 
 **The red-flag button reads exactly:** `Get urgent help`
-
-**Tone by theme.** Same meaning, different rhythm:
-
-- `kawaii` and `neon`: *Does the pain change when you move?* / *Saved. Three
-  entries today.*
-- `crt`: *MOVEMENT CHANGES PAIN? [Y] [N] [SOMETIMES]* / *ENTRY LOGGED, 3 TODAY*
-
-All three themes share the same strings. The CRT casing is `text-transform`
-driven by `--label-transform`, not a second set of wording, so a phrasing
-change lands everywhere and there is nothing to keep in step.
 
 ## Reference material
 

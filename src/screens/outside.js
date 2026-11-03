@@ -1,8 +1,4 @@
-/* Outside: UV, sun protection, and air.
- *
- * Opens on the stored reading and refreshes behind it. Every figure can be
- * entered by hand, and the guidance is identical either way.
- */
+// Outside: UV, sun protection, and air.
 
 import { el, eyebrow, fieldLabel, panel, button, row, rows, segmented } from '../app/ui.js';
 import { savedPlace, savePlace, fetchConditions, lastConditions, refreshIfStale,
@@ -12,9 +8,8 @@ import { profile } from '../app/store.js';
 
 export function renderOutside(screen, { go, live }) {
   let manual = { uv: null, aqi: null };
-  /* Opens on whatever was last stored, so arriving from the home tile shows
-     the same reading the tile did rather than an empty screen asking for one.
-     Nothing is fetched until it is asked for. */
+  // Opens on whatever was last stored, so arriving from the home tile shows the same reading
+  // the tile did rather than an empty screen asking for one.
   const held = lastConditions();
   let status = held ? { ok: true, data: held.data, at: held.at, stale: held.stale, source: 'cache' } : null;
 
@@ -27,17 +22,12 @@ export function renderOutside(screen, { go, live }) {
     screen.appendChild(eyebrow('Outside'));
     screen.appendChild(el('h1', null, 'Sun and air today'));
 
-    /* ---- Where ----
-     * Ask the device first, since that is one tap and gets it right. Search
-     * covers everyone who declines, is travelling, or wants somewhere else.
-     */
+    // Where Ask the device first, since that is one tap and gets it right.
     screen.appendChild(fieldLabel('Where you are'));
 
     if (place) {
       const chosen = el('div', 'placebar');
-      /* Refreshing happens on its own, but asking for it is a reasonable
-         thing to want, and until this was here the only way to force one was
-         to change the place and change it back. */
+      // Refreshing happens on its own, but asking for it is a reasonable thing to want.
       const again = button('Fetch now', 'chipbtn', async () => {
         status = 'loading';
         draw();
@@ -114,7 +104,7 @@ export function renderOutside(screen, { go, live }) {
       screen.appendChild(find);
     }
 
-    /* ---- Readings ---- */
+    // Readings
     const live_ = status?.ok ? status.data : null;
     const uv = manual.uv ?? live_?.uv ?? null;
     const aqi = manual.aqi ?? live_?.aqi ?? null;
@@ -129,9 +119,8 @@ export function renderOutside(screen, { go, live }) {
       err.dataset.severity = 'soon';
       screen.appendChild(err);
     } else if (status?.source === 'cache') {
-      /* Says what it has and how old it is, and never tells anyone to fetch
-         again: it is already refreshing on its own, and the one case where
-         that cannot work is the one where the instruction is useless. */
+      // Says what it has and how old it is, and never tells anyone to fetch again: it is
+      // already refreshing on its own.
       const at = new Date(status.at)
         .toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       const offline = typeof navigator !== 'undefined' && navigator.onLine === false;
@@ -160,7 +149,7 @@ export function renderOutside(screen, { go, live }) {
       screen.appendChild(head);
     }
 
-    /* ---- Skin type ---- */
+    // Skin type
     screen.appendChild(el('h2', null, 'Your skin'));
     screen.appendChild(el('p', 'hint',
       'How your skin behaves in the sun, not where you are from.'));
@@ -173,11 +162,10 @@ export function renderOutside(screen, { go, live }) {
     screen.appendChild(el('p', 'hint',
       `Type ${skinType}: ${SKIN_TYPES.find(t => t.id === skinType).label.toLowerCase()}.`));
 
-    /* ---- Sun advice ---- */
+    // Sun advice
     const sun = uv != null ? sunAdvice(uv, skinType) : null;
     if (sun) {
-      /* The same figure as the reading above it. Rounding to a whole number
-         here put "UV 9" under a reading of 8.6 on the same screen. */
+      // The same figure as the reading above it.
       const box = panel(eyebrow(`What to do at UV ${Math.round(uv * 10) / 10}`));
       if (sun.spf) {
         box.appendChild(el('p', 'verdict-line', `SPF ${sun.spf} or higher`));
@@ -216,7 +204,7 @@ export function renderOutside(screen, { go, live }) {
       screen.appendChild(how);
     }
 
-    /* ---- Air ---- */
+    // Air
     if (aqi != null) {
       const air = airAdvice(aqi, scale);
       screen.appendChild(el('h2', null, 'Air'));
@@ -235,7 +223,7 @@ export function renderOutside(screen, { go, live }) {
       screen.appendChild(box);
     }
 
-    /* ---- Manual entry, always available ---- */
+    // Manual entry, always available
     screen.appendChild(el('h2', null, 'Enter it by hand'));
     screen.appendChild(el('p', 'hint',
       'If you would rather not fetch anything, or the network is off, type '
@@ -270,7 +258,7 @@ export function renderOutside(screen, { go, live }) {
         'Pick a place above to fetch, or type the numbers in.'));
     }
 
-    /* ---- The network note ---- */
+    // The network note
     const net = panel(
       eyebrow('What leaves this device'),
       el('p', null,
@@ -289,15 +277,8 @@ export function renderOutside(screen, { go, live }) {
 
   draw();
 
-  /* Held data is on screen already, so a refresh runs behind it and only
-     redraws if it lands with something newer.
-
-     Subscribing rather than acting on one result: the shell also refreshes
-     when the network returns and when the app comes back to the foreground,
-     and those land long after this screen was built. Without this the screen
-     kept showing the old figure while the stored reading had already moved
-     on. Manual entries are left alone, since someone who typed a value meant
-     it and a fetch arriving is no reason to discard it. */
+  // Held data is on screen already, so a refresh runs behind it and only redraws if it lands
+  // with something newer.
   const stopListening = onConditions(({ data, at }) => {
     if (!screen.isConnected) { stopListening(); return; }
     if (manual.uv != null || manual.aqi != null) return;

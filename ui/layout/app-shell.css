@@ -1,9 +1,4 @@
-/* App shell.
- *
- * Three bands: a status strip, a scrolling screen, a tab bar. The strip and
- * the bar never move, so the app keeps the shape a native wrapper expects
- * and a screen can be swapped without touching the frame.
- */
+/* App shell. */
 
 *, *::before, *::after { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
@@ -25,24 +20,10 @@ body {
   grid-template-rows: auto 1fr auto;
   /* When the tab bar is hidden the third row collapses on its own. */
   block-size: 100dvh;
-  background:
-    radial-gradient(130% 60% at 50% 0%, var(--accent-wash), transparent 55%),
-    var(--bg);
+  background: var(--bg);
   overflow: hidden;
 }
 
-/* The measuring grid that makes flat dark space read as a display. */
-.app::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background-image:
-    linear-gradient(var(--hair) var(--hairline), transparent var(--hairline)),
-    linear-gradient(90deg, var(--hair) var(--hairline), transparent var(--hairline));
-  background-size: 48px 48px;
-  opacity: 0.25;
-  pointer-events: none;
-}
 .app::after {
   content: "";
   position: absolute;
@@ -52,7 +33,7 @@ body {
   z-index: var(--z-banner);
 }
 
-/* ---- Status strip ---- */
+/* Status strip */
 .statusbar {
   position: relative;
   z-index: var(--z-sticky);
@@ -76,8 +57,8 @@ body {
   align-items: center;
   gap: var(--s-1);
   color: var(--accent);
-  /* The label swaps between a word and a running count, so it holds its own
-     width rather than shoving the clock around every few hundred ms. */
+  /* The label swaps between a word and a running count, so it holds its own width rather
+     than shoving the clock around every few hundred ms. */
   font-variant-numeric: tabular-nums;
 }
 .statusbar__local[data-busy] { color: var(--ink-mid); }
@@ -93,18 +74,16 @@ body {
   .statusbar__local[data-busy]::before { animation: none; }
 }
 
-/* ---- Screen host ---- */
+/* Screen host */
 .screens { position: relative; display: grid; overflow: hidden; }
 .screen {
   grid-area: 1 / 1;
-  /* Full width so wheel events outside the content column still scroll it.
-     The column itself is an inner wrapper. */
+  /* Full width so wheel events outside the content column still scroll it. */
   inline-size: 100%;
   overflow-y: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
-  /* The instrument look does not survive a system scrollbar down the side.
-     Content still scrolls, and the shell never scrolls behind it. */
+  /* The instrument look does not survive a system scrollbar down the side. */
   scrollbar-width: none;
 }
 .screen::-webkit-scrollbar { display: none; }
@@ -128,7 +107,7 @@ body {
 /* A screen that owns its own full-bleed layout, like the symptom console. */
 .screen--bleed { inline-size: 100%; padding: 0; overflow: hidden; }
 
-/* ---- Tab bar ---- */
+/* Tab bar */
 .tabs {
   position: relative;
   z-index: var(--z-nav);
@@ -159,7 +138,7 @@ body {
 .tab svg { inline-size: 20px; block-size: 20px; fill: none; stroke: currentColor; stroke-width: 1.5; }
 .tab:hover { color: var(--ink-mid); }
 .tab[aria-current="page"] { color: var(--accent); }
-/* A lit rail above the active tab. Position is the cue, colour reinforces. */
+/* A lit rail above the active tab. */
 .tab[aria-current="page"]::before {
   content: "";
   position: absolute;
@@ -171,9 +150,8 @@ body {
 }
 .tab { position: relative; }
 
-/* ---- Shared screen furniture ---- */
-/* An eyebrow marks a section. It is decoration and is meant to sit quietly
-   above a heading that carries the meaning. */
+/* Shared screen furniture */
+/* An eyebrow marks a section. */
 .eyebrow {
   margin: 0 0 var(--s-2);
   font-family: var(--font-mono);
@@ -183,9 +161,8 @@ body {
   color: var(--ink-mid);
 }
 
-/* A field label names the control it sits above, so it reads at body size in
-   the body face, at full brightness, in sentence case. Tracked mono at eleven
-   pixels is a display flourish and the wrong tool here. */
+/* A field label names the control it sits above, so it reads at body size in the body face,
+   at full brightness, in sentence case. */
 .field-label {
   display: block;
   margin: 0 0 var(--s-2);
@@ -220,19 +197,9 @@ body {
 .panel {
   position: relative;
   background: var(--panel);
-  border: var(--hairline) solid var(--hair-edge);
+  border: var(--hairline) solid var(--hair);
   border-radius: var(--r-md);
   padding: var(--s-4);
-}
-/* Corner ticks. Drawn on a pseudo-element so a panel needs no extra markup. */
-.panel--ticked::before,
-.panel--ticked::after {
-  content: "";
-  position: absolute;
-  inline-size: var(--corner-len);
-  block-size: var(--corner-len);
-  border: 0 solid var(--hair-strong);
-  pointer-events: none;
 }
 .panel--ticked::before {
   inset-block-start: -1px; inset-inline-start: -1px;
@@ -292,9 +259,7 @@ body {
 .btn--block { inline-size: 100%; }
 .btn--danger { background: var(--sev-now); color: var(--sev-now-ink); }
 
-/* Horizontal chip strip. Scrolls sideways, never wraps into a wall.
-   A chip cut off by the viewport edge is the only cue that the strip
-   scrolls, so the mask fades the last one out instead of guillotining it. */
+/* Horizontal chip strip. */
 .chiprow {
   display: flex;
   gap: var(--s-2);
@@ -305,9 +270,8 @@ body {
   padding-inline: var(--gutter);
   scroll-snap-type: inline proximity;
   scroll-padding-inline: var(--gutter);
-  /* Fades both ends equally, so it reads the same under rtl where the strip
-     scrolls the other way. A gradient angle is not a logical property, so
-     symmetry is what makes this direction-agnostic. */
+  /* Fades both ends equally, so it reads the same under rtl where the strip scrolls the
+     other way. */
   mask-image: linear-gradient(to right,
     transparent 0, #000 var(--s-5),
     #000 calc(100% - var(--s-5)), transparent 100%);
@@ -371,9 +335,7 @@ body {
   white-space: nowrap;
 }
 
-/* ---- The content column widens in steps rather than stretching. Prose
-   still stops at --measure, so a wider column buys more room for grids and
-   rows without turning paragraphs into unreadable lines. ---- */
+/* The content column widens in steps rather than stretching. */
 @media (min-width: 46rem) {
   .screen > .col,
 .screen .col { inline-size: min(100%, 42rem); padding-inline: var(--s-5); }
@@ -386,8 +348,7 @@ body {
   .grid2 { grid-template-columns: repeat(4, 1fr); }
 }
 
-/* ---- Wide screens keep the mobile shape. The bar becomes a rail so the
-   thumb reach rule does not turn into a stretched desktop layout. ---- */
+/* Wide screens keep the mobile shape. */
 @media (min-width: 64rem) {
   .app {
     grid-template-rows: auto 1fr;
@@ -434,12 +395,11 @@ body {
   transition-duration: 1ms !important;
 }
 
-/* `hidden` has to beat a display rule set by a class, or an element the
-   script hides stays on screen. */
+/* `hidden` has to beat a display rule set by a class, or an element the script hides stays
+   on screen. */
 [hidden] { display: none !important; }
 
-/* An armed row states what the next press does. Amber, because it is a
-   warning about the tap rather than about the entry. */
+/* An armed row states what the next press does. */
 .row[data-armed] {
   border-color: var(--sev-soon);
   background: var(--sev-soon-wash);
@@ -450,8 +410,7 @@ body {
   white-space: nowrap;
 }
 
-/* A failure that has to be read before the next action. Sits above the tab
-   bar rather than over the content, so nothing is hidden behind it. */
+/* A failure that has to be read before the next action. */
 .notice {
   position: absolute;
   inset-inline: var(--gutter);
@@ -471,8 +430,7 @@ body {
 .notice p { margin: 0; font-size: var(--t-small); }
 @keyframes notice-in { from { opacity: 0; transform: translate3d(0, var(--s-3), 0); } }
 
-/* A strip that can be dragged says so under the cursor. Touch needs none of
-   this, and a pointer that cannot hover never sees it. */
+/* A strip that can be dragged says so under the cursor. */
 @media (hover: hover) and (pointer: fine) {
   .chiprow, .zooms { cursor: grab; }
   .chiprow[data-dragging], .zooms[data-dragging] { cursor: grabbing; }
@@ -495,40 +453,18 @@ body {
   color: var(--sev-soon);
 }
 
-/* The measuring grid and the ambient wash are instrument language. They read
-   as grubby on cream, so the soft theme drops them and keeps the plain field. */
-:root[data-theme="kawaii"] .app::before { display: none; }
-:root[data-theme="kawaii"] .app {
+:root .statusbar,
+:root .tabs {
   background: var(--bg);
 }
-:root[data-theme="kawaii"] .statusbar,
-:root[data-theme="kawaii"] .tabs {
-  background: var(--bg-deep);
-}
-/* Cards lift off the cream instead of being outlined against the dark. */
-:root[data-theme="kawaii"] .panel,
-:root[data-theme="kawaii"] .card,
-:root[data-theme="kawaii"] .tile2 {
-  box-shadow: var(--shadow-card);
-}
 
-/* A list of rows is one card, not a row of them.
-   The instrument themes hang these hairlines off the measuring grid behind
-   them, which is what holds the list together there. The soft theme has no
-   grid, so the same list arrived as separate square slabs, each with its own
-   shadow, next to panels that were all rounded. The group takes the card and
-   the hairlines become separators inside it.
-
-   Scoped to lists that hold rows: .rows also carries verdict blocks, which
-   bring their own surface and would end up boxed twice. */
-:root[data-theme="kawaii"] .rows:has(> .row) {
+.rows:has(> .row) {
   background: var(--panel);
-  /* The same surface as a panel, since the two stack on several screens and
-     a different radius or edge on each read as two unrelated systems. */
-  border: var(--hairline) solid var(--hair-edge);
+  /* The same surface as a panel, since the two stack on several screens and a different
+     radius or edge on each read as two unrelated systems. */
+  border: var(--hairline) solid var(--hair);
   border-radius: var(--r-md);
-  box-shadow: var(--shadow-card);
   padding-inline: var(--s-4);
-  /* No overflow clip here on purpose: rows carry no fill of their own, and a
-     clip would cut the focus ring, which is drawn as a shadow. */
+  /* No overflow clip here on purpose: rows carry no fill of their own, and a clip would cut
+     the focus ring, which is drawn as a shadow. */
 }

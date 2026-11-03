@@ -1,19 +1,4 @@
-/* Active ingredient dictionary.
- *
- * One molecule, many printed names. The International Nonproprietary Name
- * (INN) is what most of the world prints. The United States Adopted Name
- * (USAN) and the older British Approved Name (BAN) diverge for a handful of
- * common drugs: paracetamol and acetaminophen name the same compound, and
- * nothing on either label says so.
- *
- * Names here follow the WHO INN list, with USAN and BAN variants recorded
- * where they diverge. Salt and ester forms are listed against their base,
- * because a salt changes the number printed under "strength" without
- * changing which molecule is doing the work.
- *
- * No brand names live in this file. A brand is a marketing decision, not a
- * property of the molecule.
- */
+// Active ingredient dictionary.
 
 export const INGREDIENTS = [
   {
@@ -138,9 +123,7 @@ export const INGREDIENTS = [
   },
 ];
 
-/* Salt and ester suffixes. They change the printed strength without changing
-   which molecule does the work, so they are recorded and reported rather
-   than silently ignored. */
+// Salt and ester suffixes.
 const SALTS = [
   'hydrochloride', 'hcl', 'sodium', 'potassium', 'calcium', 'magnesium',
   'sulfate', 'sulphate', 'phosphate', 'maleate', 'tartrate', 'bitartrate',
@@ -150,7 +133,7 @@ const SALTS = [
 
 const clean = s => String(s || '').toLowerCase().trim().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, ' ');
 
-/** Split a typed ingredient into its base name and any salt or ester. */
+// Split a typed ingredient into its base name and any salt or ester.
 export function parseIngredient(text) {
   const t = clean(text);
   if (!t) return { raw: '', base: '', salt: null, entry: null };
@@ -170,11 +153,7 @@ export function parseIngredient(text) {
   return { raw: text, base, salt, entry: entry ?? null };
 }
 
-/**
- * Compare two typed ingredient names.
- * @returns {{verdict:'same'|'same-different-name'|'same-different-salt'|'related'|'different'|'unknown',
- *            line:string, detail?:string}}
- */
+// Compare two typed ingredient names.
 export function compareIngredients(a, b) {
   const A = parseIngredient(a);
   const B = parseIngredient(b);
@@ -203,10 +182,7 @@ export function compareIngredients(a, b) {
         detail: A.entry.note,
       };
     }
-    /* The same name typed twice. The entry note explains how this drug's names
-       vary between countries, which answers a question nobody asked here and
-       reads as a warning about a second product that is not on the table.
-       Point at what can still differ instead. */
+    // The same name typed twice.
     return {
       verdict: 'same',
       line: 'Same ingredient',
@@ -246,7 +222,7 @@ export function compareIngredients(a, b) {
   };
 }
 
-/** Everything worth saying about one typed name, for the detail panel. */
+// Everything worth saying about one typed name, for the detail panel.
 export function describeIngredient(text) {
   const { entry, salt } = parseIngredient(text);
   if (!entry) return null;

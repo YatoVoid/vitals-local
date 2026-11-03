@@ -1,7 +1,4 @@
-/* Run: node tests/symptom-game.test.js
- * No framework. Fails loudly if the body map, the flow, the triage logic, or
- * the wording constraints break.
- */
+// Run: node tests/symptom-game.test.js No framework.
 import assert from 'node:assert/strict';
 import { REGIONS, PAIN_TYPES } from '../ui/components/symptom-game/regions.js';
 import { regionIdFor, regionsIn, VIEWS, ZOOMS, zoomById, BODY_W, BODY_H }
@@ -12,7 +9,7 @@ import { startSession, nextQuestion, answer, resolve, ranked, stepBack, skipQues
   from '../src/triage/engine.js';
 import { compareIngredients, parseIngredient } from '../src/data/ingredients.js';
 
-/* ---- Body map: the side mapping that is easiest to get wrong ---- */
+// Body map: the side mapping that is easiest to get wrong
 {
   const thigh = { key: 'thigh' };
   assert.equal(regionIdFor(thigh, 'front', false), 'thigh.right');
@@ -27,7 +24,7 @@ import { compareIngredients, parseIngredient } from '../src/data/ingredients.js'
   assert.equal(regionIdFor({ key: 'chestside' }, 'right'), 'chest.side.right');
 }
 
-/* ---- Four views, every id labelled ---- */
+// Four views, every id labelled
 {
   assert.deepEqual(VIEWS, ['front', 'back', 'left', 'right']);
   const all = new Set();
@@ -45,7 +42,7 @@ import { compareIngredients, parseIngredient } from '../src/data/ingredients.js'
   for (const id of all) assert.ok(bankFor(id), `no bank for ${id}`);
 }
 
-/* ---- Triage banks are internally consistent ---- */
+// Triage banks are internally consistent
 {
   for (const bank of [...BANKS, GENERIC]) {
     const causeIds = new Set(bank.causes.map(c => c.id));
@@ -82,7 +79,7 @@ import { compareIngredients, parseIngredient } from '../src/data/ingredients.js'
   }
 }
 
-/* ---- Clinical patterns land where they should ---- */
+// Clinical patterns land where they should
 function walk(region, seed, script, limit = 12) {
   const bank = bankFor(region);
   let s = startSession(bank, { region, ...seed });
@@ -123,7 +120,7 @@ function walk(region, seed, script, limit = 12) {
   assert.equal(appy.out.red_flag_present, true, 'appendicitis pattern missed');
   assert.equal(appy.out.ranked_categories[0].category_id, 'appendicitis');
 
-  // Saddle numbness alone is enough. It must fire on the first answer.
+  // Saddle numbness alone is enough.
   const cauda = walk('back.lower.left', { painTypes: ['pain.aching'], intensity: 6 }, {
     'q.saddle': 'yes',
   });
@@ -180,7 +177,7 @@ function walk(region, seed, script, limit = 12) {
   assert.equal(gout.out.ranked_categories[0].category_id, 'gout');
 }
 
-/* ---- The engine asks adaptively rather than from a fixed list ---- */
+// The engine asks adaptively rather than from a fixed list
 {
   const bank = bankFor('chest.left');
   const a = startSession(bank, { region: 'chest.left', painTypes: [], intensity: 5 });
@@ -216,7 +213,7 @@ function walk(region, seed, script, limit = 12) {
   assert.equal(ranked(again, bank)[0].id, beforeBack, 'stepping back and forward changed the result');
 }
 
-/* ---- Walk the machine the way a person walks the screen ---- */
+// Walk the machine the way a person walks the screen
 {
   let s = initialState();
   assert.equal(s.stage, STATES.BODY_SELECT);
@@ -278,7 +275,7 @@ function walk(region, seed, script, limit = 12) {
   assert.equal(s.view, view, 'restart keeps the view the person was on');
 }
 
-/* ---- Ingredient naming ---- */
+// Ingredient naming
 {
   const same = compareIngredients('Paracetamol', 'Acetaminophen');
   assert.equal(same.verdict, 'same-different-name',
@@ -298,7 +295,7 @@ function walk(region, seed, script, limit = 12) {
   assert.equal(parseIngredient('Diclofenac sodium').entry.id, 'diclofenac');
 }
 
-/* ---- Wording constraints, enforced rather than documented ---- */
+// Wording constraints, enforced rather than documented
 {
   const words = str => str.trim().split(/\s+/).length;
   for (const p of PAIN_TYPES) {
@@ -319,9 +316,7 @@ function walk(region, seed, script, limit = 12) {
   assert.ok(PAIN_TYPES.filter(p => !p.extra).length <= 10, 'first pain view stays at ten or fewer');
 }
 
-/* ---- Themes ----
-   Renaming a theme must not quietly reset anyone who chose it, and every
-   theme has to define the whole token set or a screen ends up half styled. ---- */
+// Themes ----    Renaming a theme must not quietly reset anyone who chose it, and every    theme has to define the whole token set or a screen ends up half styled.
 {
   const bag = new Map();
   globalThis.localStorage = {
@@ -335,27 +330,27 @@ function walk(region, seed, script, limit = 12) {
 
   const store = await import('../src/app/store.js');
 
-  assert.equal(store.settings.get().theme, 'kawaii', 'a fresh install opens soft');
+  assert.equal(store.settings.get().theme, 'light', 'a fresh install opens light');
 
-  bag.set('vitals.settings', JSON.stringify({ theme: 'med' }));
-  assert.equal(store.settings.get().theme, 'neon',
-    'someone who chose the instrument theme keeps it under its new name');
+  for (const [old, now] of [['kawaii', 'light'], ['med', 'dark'], ['neon', 'dark'], ['crt', 'dark']]) {
+    bag.set('vitals.settings', JSON.stringify({ theme: old }));
+    assert.equal(store.settings.get().theme, now, `a saved ${old} theme maps to ${now}`);
+  }
 
-  bag.set('vitals.settings', JSON.stringify({ theme: 'crt' }));
-  assert.equal(store.settings.get().theme, 'crt', 'other themes are left alone');
+  bag.set('vitals.settings', JSON.stringify({ theme: 'dark' }));
+  assert.equal(store.settings.get().theme, 'dark', 'dark is kept');
 
-  /* A settings object written before a key existed, or restored from an
-     export made then, must not hand the DOM an undefined. */
+  // A settings object written before a key existed must not hand the DOM an undefined.
   bag.set('vitals.settings', JSON.stringify({ setupDone: true, country: 'AZ' }));
   const partial = store.settings.get();
-  assert.equal(partial.theme, 'kawaii', 'a missing theme falls back');
+  assert.equal(partial.theme, 'light', 'a missing theme falls back');
   assert.equal(partial.country, 'AZ', 'what was stored is kept');
   for (const [k, v] of Object.entries(partial)) {
     assert.notEqual(v, undefined, `${k} came back undefined`);
   }
 
   bag.set('vitals.settings', JSON.stringify({ theme: 'from-the-future' }));
-  assert.equal(store.settings.get().theme, 'kawaii', 'an unknown theme falls back');
+  assert.equal(store.settings.get().theme, 'light', 'an unknown theme falls back');
 
   // Every theme defines every token, checked against the stylesheet itself.
   const { readFileSync } = await import('node:fs');
@@ -372,40 +367,26 @@ function walk(region, seed, script, limit = 12) {
   };
   const tokensIn = block => new Set([...block.matchAll(/(--[a-z0-9-]+)\s*:/g)].map(m => m[1]));
 
-  const neon = tokensIn(blockFor('neon'));
-  assert.ok(neon.size > 30, 'the reference theme defines a full set');
-  for (const name of ['kawaii', 'crt']) {
-    const missing = [...neon].filter(t => !tokensIn(blockFor(name)).has(t));
-    assert.deepEqual(missing, [], `${name} is missing tokens the other themes define`);
-  }
+  const light = tokensIn(blockFor('light'));
+  assert.ok(light.size > 30, 'the light theme defines a full set');
+  const missing = [...light].filter(t => !tokensIn(blockFor('dark')).has(t));
+  assert.deepEqual(missing, [], 'dark is missing tokens light defines');
+  assert.match(blockFor('light'), /color-scheme:\s*light/);
+  assert.match(blockFor('dark'), /color-scheme:\s*dark/);
 
-  // The soft theme is the light one and must say so, or form controls
-  // render dark on cream.
-  assert.match(blockFor('kawaii'), /color-scheme:\s*light/);
-  assert.match(blockFor('neon'), /color-scheme:\s*dark/);
-
-  /* A list of rows is one card in the soft theme. Without it the rows arrive
-     as separate square slabs beside panels that are all rounded, which is
-     what Track, Learn and You looked like. The instrument themes keep the
-     bare hairline list, so the rule stays scoped to the one theme. */
+  // A list of rows is one bordered group, not separate slabs.
   const shell = readFileSync(
     join(dirname(fileURLToPath(import.meta.url)), '..', 'ui', 'layout', 'app-shell.css'), 'utf8');
-  const listCard = shell.match(
-    /:root\[data-theme="kawaii"\]\s*\.rows:has\(>\s*\.row\)\s*\{[^}]*\}/);
-  assert.ok(listCard, 'the soft theme groups a row list into one card');
+  const listCard = shell.match(/\n\.rows:has\(>\s*\.row\)\s*\{[^}]*\}/);
+  assert.ok(listCard, 'a row list is grouped into one block');
   assert.match(listCard[0], /border-radius:\s*var\(--r-md\)/,
     'the row list carries the same radius as a panel, since the two stack');
-  assert.ok(!/kawaii"\]\s*\.row\s*\{[^}]*box-shadow/.test(shell),
-    'rows do not each carry their own card shadow');
 
   delete globalThis.localStorage;
   delete globalThis.document;
 }
 
-/* ---- Lab bands ----
-   The whole point of these is that a value can sit inside the printed range
-   and still mean something, so the tests pin the thresholds that carry that
-   and the wording that must not slip. ---- */
+// Lab bands ----    The whole point of these is that a value can sit inside the printed range    and still mean something, so the tests pin the thresholds that carry that    and the wording that must not slip.
 {
   const { MARKERS, assess, RANGE_NOTE } = await import('../src/data/labs.js');
   const find = id => MARKERS.find(m => m.id === id);
@@ -426,8 +407,8 @@ function walk(region, seed, script, limit = 12) {
     assert.ok(m.basis && m.basis.length > 20, `${m.id} says where its numbers come from`);
   }
 
-  /* Ferritin is the case the whole feature exists for: 20 is inside a range
-     that starts at 15 in many laboratories, and is still iron deficiency. */
+  // Ferritin is the case the whole feature exists for: 20 is inside a range that starts at 15
+  // in many laboratories, and is still iron deficiency.
   assert.equal(zoneAt('fer', 10), 'empty');
   assert.equal(zoneAt('fer', 20), 'deficient');
   assert.equal(zoneAt('fer', 29), 'deficient');
@@ -436,8 +417,8 @@ function walk(region, seed, script, limit = 12) {
   assert.equal(zoneAt('fer', 400), 'high');
   assert.match(assess(find('fer'), 20).zone.note, /deficien/i);
 
-  /* Haemoglobin has to follow the sex on the profile, since the anaemia
-     threshold differs by about 10 g/L. */
+  // Haemoglobin has to follow the sex on the profile, since the anaemia threshold differs by
+  // about 10 g/L.
   assert.equal(zoneAt('hb', 125, { sex: 'Female' }), 'low-normal');
   assert.equal(zoneAt('hb', 125, { sex: 'Male' }), 'mild');
   assert.equal(assess(find('hb'), 125, { sex: 'Female' }).outside, null);
@@ -445,8 +426,8 @@ function walk(region, seed, script, limit = 12) {
   assert.equal(zoneAt('hb', 70, {}), 'severe');
   assert.equal(zoneAt('hb', 95, {}), 'moderate');
 
-  /* HbA1c: the band between normal and diabetes is inside what many reports
-     print without a flag. */
+  // HbA1c: the band between normal and diabetes is inside what many reports print without a
+  // flag.
   assert.equal(zoneAt('hba1c', 38), 'ok');
   assert.equal(zoneAt('hba1c', 44), 'raised');
   assert.equal(zoneAt('hba1c', 48), 'diabetes');
@@ -483,10 +464,7 @@ function walk(region, seed, script, limit = 12) {
     'lab wording avoids the hedges the style rules ban');
 }
 
-/* ---- Home tile order ----
-   A saved arrangement outlives the version that wrote it, so it has to
-   survive tiles being added and removed rather than hiding the new ones or
-   throwing on the old. ---- */
+// Home tile order ----    A saved arrangement outlives the version that wrote it, so it has to    survive tiles being added and removed rather than hiding the new ones or    throwing on the old.
 {
   const bag = new Map();
   globalThis.localStorage = {
@@ -500,16 +478,13 @@ function walk(region, seed, script, limit = 12) {
 
   const { resolveOrder, DEFAULT_ORDER } = await import('../src/screens/home.js');
 
-  /* The arrangement itself was asked for, so it is pinned rather than left to
-     whatever the tile builders happen to be declared in. */
+  // The arrangement itself was asked for, so it is pinned rather than left to whatever the tile
+  // builders happen to be declared in.
   assert.deepEqual(DEFAULT_ORDER,
     ['water', 'energy', 'uv', 'air', 'symptoms', 'meds'],
     'the default arrangement is the one that was asked for');
 
-  /* Through the list the screen actually passes, not the default parameter.
-     The screen handed in the builder declaration order, so the arrangement
-     above was written, tested and never reached anybody's home screen. The
-     builders below are deliberately in the wrong order for that reason. */
+  // Through the list the screen actually passes, not the default parameter.
   const { availableTiles, renderHome } = await import('../src/screens/home.js');
   const builders = { symptoms: 1, water: 1, energy: 1, meds: 1, uv: 1, air: 1 };
   assert.deepEqual(resolveOrder(undefined, availableTiles(builders)), DEFAULT_ORDER,
@@ -517,8 +492,8 @@ function walk(region, seed, script, limit = 12) {
   // A tile nobody has listed still appears rather than disappearing.
   assert.deepEqual(availableTiles({ ...builders, sleep: 1 }).at(-1), 'sleep');
 
-  /* Drawn for real, because the helper being right did not stop the screen
-     passing its own list and getting a different arrangement. */
+  // Drawn for real, because the helper being right did not stop the screen passing its own list
+  // and getting a different arrangement.
   const node = () => ({
     children: [], dataset: {}, style: {}, attrs: {}, _cls: '', _text: '',
     set className(v) { this._cls = v; }, get className() { return this._cls; },
@@ -576,9 +551,7 @@ function walk(region, seed, script, limit = 12) {
   delete globalThis.document;
 }
 
-/* ---- Emergency numbers ----
-   The number on a red flag screen is the one thing that cannot be guessed, so
-   the table is checked for shape and the unknown case for honesty. ---- */
+// Emergency numbers ----    The number on a red flag screen is the one thing that cannot be guessed, so    the table is checked for shape and the unknown case for honesty.
 {
   const { emergencyFor, emergencyLine, coveredCountries } =
     await import('../src/data/emergency.js');
@@ -615,10 +588,7 @@ function walk(region, seed, script, limit = 12) {
   assert.match(known.text, /Greece/);
 }
 
-/* ---- Skipping a question ----
-   Skipping must remove the question from the pool. Left in, the engine picks
-   the same one straight back and the button looks dead. It must also leave
-   the ranking untouched, since a skip is not evidence. ---- */
+// Skipping a question ----    Skipping must remove the question from the pool. Left in, the engine picks    the same one straight back and the button looks dead. It must also leave    the ranking untouched, since a skip is not evidence.
 {
   const bank = bankFor('chest.left');
   let s = startSession(bank, { region: 'chest.left', painTypes: ['pain.sharp'], intensity: 5 });
@@ -656,10 +626,7 @@ function walk(region, seed, script, limit = 12) {
   assert.notEqual(nextQuestion(back, bank)?.id, q2.id, 'and does not re-offer it');
 }
 
-/* ---- Food and energy ----
-   The energy target, the weekly window and the shortcut list. The target is
-   the one that matters: a single figure for everyone sat about 600 kcal above
-   what an average woman at low activity needs. ---- */
+// Food and energy ----    The energy target, the weekly window and the shortcut list. The target is    the one that matters: a single figure for everyone sat about 600 kcal above    what an average woman at low activity needs.
 {
   const bag = new Map();
   globalThis.localStorage = {
@@ -723,9 +690,7 @@ function walk(region, seed, script, limit = 12) {
   assert.equal(picked[2].proteinG, 14, 'protein carries through to the shortcut');
   assert.ok(picked.every(f => f.fromLog), 'these came from the log and must not be translated');
 
-  /* Kilojoules are their own setting, not a rider on metric and US. Someone
-     in Australia is metric and reads kilojoules, so the two switches have to
-     move independently. What is stored stays kcal either way. */
+  // Kilojoules are their own setting, not a rider on metric and US.
   const u = await import('../src/app/units.js');
   const KCAL = { units: 'metric', energyUnit: 'kcal' };
   const KJ = { units: 'metric', energyUnit: 'kj' };
@@ -748,20 +713,15 @@ function walk(region, seed, script, limit = 12) {
   assert.equal(u.storeEnergy(2000, KCAL), 2000, 'calories are stored as typed');
   assert.equal(u.withEnergy(500, KJ), '2090 kJ');
 
-  /* The screen prints "eaten minus target is difference", so the three have to
-     agree once rounded. Converting the difference on its own does not agree,
-     which is why the screen subtracts the two figures it already shows. This
-     pins the trap rather than the workaround: if converting separately ever
-     starts matching, the rounding changed and the screen wants rechecking. */
+  // The screen prints "eaten minus target is difference", so the three have to agree once
+  // rounded.
   const eaten = 405, goal = 2000;
   const shownGap = u.energy(eaten, KJ) - u.energy(goal, KJ);
   assert.equal(shownGap, -6680, 'the difference of the two figures on screen');
   assert.notEqual(u.energy(eaten - goal, KJ), shownGap,
     'converting the difference on its own disagrees, so the screen must not do it');
 
-  /* The target follows a goal, because maintenance answers only one question.
-     Someone above the healthy range for their height was shown the figure
-     that keeps them there. */
+  // The target follows a goal, because maintenance answers only one question.
   const bm = await import('../src/app/body-metrics.js');
   const m = { maintenance: 2400, sex: 'Female', weightKg: 70, bmr: 1600, factor: 1.5 };
 
@@ -773,9 +733,7 @@ function walk(region, seed, script, limit = 12) {
   assert.equal(bm.energyTarget(null, 'lose'), null,
     'no maintenance means no target rather than an invented one');
 
-  /* The floor is the part that has to hold. Below roughly 1200 it is hard to
-     get a day's vitamins and minerals from the food that fits, which is why
-     guidance puts diets there under supervision. */
+  // The floor is the part that has to hold.
   const small = { maintenance: 1500, sex: 'Female', weightKg: 48 };
   const floored = bm.energyTarget(small, 'lose');
   assert.equal(floored.kcal, 1200, 'the target stops at the floor, not at 1000');
@@ -795,10 +753,7 @@ function walk(region, seed, script, limit = 12) {
   delete globalThis.document;
 }
 
-/* ---- The profile is not asked for twice ----
-   Anything already on the profile must not come back as a question. Asking a
-   man whether the pain tracks with his cycle, or asking a thirty year old
-   about headaches after fifty, reads as an app that did not look. ---- */
+// The profile is not asked for twice ----    Anything already on the profile must not come back as a question. Asking a    man whether the pain tracks with his cycle, or asking a thirty year old    about headaches after fifty, reads as an app that did not look.
 {
   const { promptFor } = await import('../src/triage/engine.js');
   const head = BANKS.find(b => b.id === 'head');
@@ -837,15 +792,13 @@ function walk(region, seed, script, limit = 12) {
     'a man is not asked whether the pain tracks with his cycle');
   assert.ok(askedIds(abdo, { sex: 'Female' }).includes('q.cycle'),
     'and a woman still is');
-  /* The profile offers four values, not two. Other and Skip say nothing
-     about whether someone menstruates, so the question stays. */
+  // The profile offers four values, not two.
   for (const sex of ['Other', 'Skip', undefined]) {
     assert.ok(askedIds(abdo, { sex }).includes('q.cycle'),
       `sex "${sex}" does not rule the question out, so it is still asked`);
   }
 
-  /* The flag has to survive the gating. A sixty year old with a new headache
-     is the case the question exists for. */
+  // The flag has to survive the gating.
   let s62 = startSession(head, {
     region: 'head.face', painTypes: [], intensity: 5, profile: { age: 62 },
   });
@@ -853,15 +806,13 @@ function walk(region, seed, script, limit = 12) {
   assert.equal(s62.redFlag?.trigger_id ?? s62.redFlag?.id, 'rf.head.new-over-50',
     'a new headache after fifty is still flagged');
 
-  /* Not knowing must never withhold a flag. */
+  // Not knowing must never withhold a flag.
   let sUnknown = startSession(head, { region: 'head.face', painTypes: [], intensity: 5 });
   sUnknown = answer(sUnknown, head, 'q.age-new', 'yes');
   assert.ok(sUnknown.redFlag, 'an unknown age still reaches the flag');
 }
 
-/* ---- Tap twice to remove, on a touch screen ----
-   A finger lifting off the glass raises pointerleave, so the row disarmed
-   itself between the two taps and removing was impossible on a phone. ---- */
+// Tap twice to remove, on a touch screen ----    A finger lifting off the glass raises pointerleave, so the row disarmed    itself between the two taps and removing was impossible on a phone.
 {
   const listeners = new Map();
   const stub = () => ({
@@ -899,9 +850,7 @@ function walk(region, seed, script, limit = 12) {
   delete globalThis.document;
 }
 
-/* ---- Removing a medicine asks first ----
-   A medicine carries a schedule somebody set up, so losing one to a stray tap
-   costs more than losing a glass of water. ---- */
+// Removing a medicine asks first ----    A medicine carries a schedule somebody set up, so losing one to a stray tap    costs more than losing a glass of water.
 {
   const handlers = new WeakMap();
   const mk = tag => {
@@ -947,7 +896,7 @@ function walk(region, seed, script, limit = 12) {
     removeItem: k => bag.delete(k), key: i => [...bag.keys()][i],
     get length() { return bag.size; },
   };
-  bag.set('vitals.settings', JSON.stringify({ setupDone: true, theme: 'kawaii' }));
+  bag.set('vitals.settings', JSON.stringify({ setupDone: true, theme: 'light' }));
 
   const { meds } = await import('../src/app/store.js');
   const { renderMeds } = await import('../src/screens/track.js');
@@ -995,10 +944,7 @@ function walk(region, seed, script, limit = 12) {
   delete globalThis.document;
 }
 
-/* ---- Medicine schedules ----
-   A missed dose is the failure that matters here, so the patterns people
-   actually get given are pinned: every day, certain days, several times a
-   day, and several times a day on only some days. ---- */
+// Medicine schedules ----    A missed dose is the failure that matters here, so the patterns people    actually get given are pinned: every day, certain days, several times a    day, and several times a day on only some days.
 {
   const { describe: describeSchedule, timesOn, nextDose, dueToday, dayKey, EVERY_DAY } =
     await import('../src/app/schedule.js');
@@ -1043,8 +989,7 @@ function walk(region, seed, script, limit = 12) {
     'Tue, Fri at 08:00');
   assert.equal(describeSchedule({ times: [] }), 'No time set');
 
-  /* Outstanding counts what has not been marked. Nothing is assumed taken
-     just because its time went by. */
+  // Outstanding counts what has not been marked.
   const now = at(4, 15);   // Tuesday afternoon
   const empty = dueToday([daily, someDays], [], now);
   assert.equal(empty.total, 5, 'two daily doses plus three on a Tuesday');
@@ -1064,10 +1009,7 @@ function walk(region, seed, script, limit = 12) {
   assert.equal(stale.taken, 0, 'a dose marked yesterday does not count for today');
 }
 
-/* ---- A red flag has to be reachable ----
-   A rule whose input is never collected cannot fire, and nothing about it
-   looks broken: it is written, reviewed and covered by its own test. Nine of
-   them had accumulated that way before this ran. ---- */
+// A red flag has to be reachable ----    A rule whose input is never collected cannot fire, and nothing about it    looks broken: it is written, reviewed and covered by its own test. Nine of    them had accumulated that way before this ran.
 {
   let seed = 20260804;
   const rnd = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
@@ -1118,10 +1060,7 @@ function walk(region, seed, script, limit = 12) {
     'a red flag depends on a question the engine may never get around to asking');
 }
 
-/* ---- Nothing stray is committed ----
-   A shell redirect inside a quoted command writes a file named after whatever
-   followed the bracket, and `git add -A` then commits it. They are empty, they
-   sort to the top of the listing, and they are the first thing anyone sees. ---- */
+// Nothing stray is committed ----    A shell redirect inside a quoted command writes a file named after whatever    followed the bracket, and `git add -A` then commits it. They are empty, they    sort to the top of the listing, and they are the first thing anyone sees.
 {
   const { execFileSync } = await import('node:child_process');
   const { statSync } = await import('node:fs');
@@ -1129,19 +1068,14 @@ function walk(region, seed, script, limit = 12) {
   const { fileURLToPath } = await import('node:url');
   const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 
-  /* Untracked files count too. Checking only what is already tracked meant
-     the run passed, a blanket add swept the artefacts in, and the commit
-     carried them anyway. These are exactly the files an add would pick up. */
+  // Untracked files count too.
   let tracked = [];
   try {
     tracked = execFileSync('git', ['ls-files', '--cached', '--others', '--exclude-standard'],
       { cwd: root, encoding: 'utf8' }).split('\n').filter(Boolean);
   } catch { tracked = []; }   // not a checkout, nothing to check
 
-  /* Empty is the signal that holds. A name test alone kept letting these
-     through: "n.attrs.translate" carries dots and no punctuation, so it reads
-     as an ordinary filename and is not one. Nothing this app ships is empty,
-     and dotfiles that legitimately are, such as .nojekyll, are skipped. */
+  // Empty is the signal that holds.
   const ALLOWED_WITHOUT_EXTENSION = new Set(['LICENSE']);
   const junk = tracked.filter(p => {
     const name = p.split('/').pop();
@@ -1152,10 +1086,7 @@ function walk(region, seed, script, limit = 12) {
   assert.deepEqual(junk, [], 'these look like shell artefacts rather than files');
 }
 
-/* ---- Offline precache ----
-   A module added to the tree but not to sw.js loads fine online and fails the
-   moment someone opens the app without a network, which is the one case the
-   file exists for. ---- */
+// Offline precache ----    A module added to the tree but not to sw.js loads fine online and fails the    moment someone opens the app without a network, which is the one case the    file exists for.
 {
   const { readFileSync, readdirSync } = await import('node:fs');
   const { join, dirname, relative, sep } = await import('node:path');
@@ -1181,11 +1112,7 @@ function walk(region, seed, script, limit = 12) {
     'sw.js precaches files that no longer exist');
 }
 
-/* ---- Refreshing the outside reading ----
-   This runs on every app open, so the cases where it must do nothing at all
-   matter more than the case where it fetches. A regression here turns a quiet
-   app into one that calls a weather service on every launch, including for
-   people who never asked for it. ---- */
+// Refreshing the outside reading ----    This runs on every app open, so the cases where it must do nothing at all    matter more than the case where it fetches. A regression here turns a quiet    app into one that calls a weather service on every launch, including for    people who never asked for it.
 {
   const bag = new Map();
   globalThis.localStorage = {
@@ -1198,8 +1125,8 @@ function walk(region, seed, script, limit = 12) {
   globalThis.fetch = () => { fetches++; return Promise.reject(new Error('no network in tests')); };
   globalThis.AbortController = class { constructor() { this.signal = null; } abort() {} };
 
-  /* Node exposes navigator as a getter with no onLine, so it is replaced for
-     the duration rather than assigned to. */
+  // Node exposes navigator as a getter with no onLine, so it is replaced for the duration
+  // rather than assigned to.
   const realNavigator = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
   const fakeNavigator = { onLine: true };
   Object.defineProperty(globalThis, 'navigator',
@@ -1222,7 +1149,7 @@ function walk(region, seed, script, limit = 12) {
   await w.refreshIfStale();
   assert.equal(fetches, 0, 'a fresh reading is not refetched');
 
-  // Offline. The browser already knows this cannot work.
+  // Offline.
   store(5 * 60 * 60 * 1000);
   fakeNavigator.onLine = false;
   await w.refreshIfStale();
@@ -1240,9 +1167,7 @@ function walk(region, seed, script, limit = 12) {
   else delete globalThis.navigator;
 }
 
-/* ---- Pain chart geometry ----
-   Readings logged minutes apart divide down to the same x and stack into one
-   column at the edge, which is what every episode looks like on day one. ---- */
+// Pain chart geometry ----    Readings logged minutes apart divide down to the same x and stack into one    column at the edge, which is what every episode looks like on day one.
 {
   const ep = await import('../src/app/episodes.js');
   const iso = ms => new Date(ms).toISOString();
@@ -1273,9 +1198,7 @@ function walk(region, seed, script, limit = 12) {
   assert.deepEqual(ep.chartPoints({ readings: [{ intensity: 4, at: iso(now) }] }), []);
 }
 
-/* ---- Units ----
-   Records stay metric and convert only at the edges, so a round trip through
-   the US system has to come back to the same stored number. ---- */
+// Units ----    Records stay metric and convert only at the edges, so a round trip through    the US system has to come back to the same stored number.
 {
   const bag = new Map();
   globalThis.localStorage = {
@@ -1321,11 +1244,7 @@ function walk(region, seed, script, limit = 12) {
   delete globalThis.document;
 }
 
-/* ---- Ingredient comparison ----
-   The per-entry note explains how a drug's names vary between countries. It
-   belongs in the answer only when the two names actually differ; shown for a
-   name typed twice it reads as a warning about a product that is not on the
-   table. ---- */
+// Ingredient comparison ----    The per-entry note explains how a drug's names vary between countries. It    belongs in the answer only when the two names actually differ; shown for a    name typed twice it reads as a warning about a product that is not on the    table.
 {
   const pair = compareIngredients('Paracetamol', 'Acetaminophen');
   assert.equal(pair.verdict, 'same-different-name');
@@ -1345,11 +1264,7 @@ function walk(region, seed, script, limit = 12) {
   assert.equal(different.verdict, 'different');
 }
 
-/* ---- Zoom crops ----
-   A crop that is not symmetric about the centre line breaks the mirrored
-   half: getBBox reports a mirrored shape in its authored coordinates, so the
-   only reason a crop test works for both halves is that the crop reflects
-   onto itself. ---- */
+// Zoom crops ----    A crop that is not symmetric about the centre line breaks the mirrored    half: getBBox reports a mirrored shape in its authored coordinates, so the    only reason a crop test works for both halves is that the crop reflects    onto itself.
 {
   assert.ok(ZOOMS.length >= 2, 'there is more than one crop');
   assert.equal(ZOOMS[0].id, 'all', 'the whole body is the first and default crop');
@@ -1377,9 +1292,7 @@ function walk(region, seed, script, limit = 12) {
   assert.equal(zoomById('nonsense').id, 'all', 'an unknown crop falls back to the whole body');
 }
 
-/* ---- Export and import round trip ----
-   An export nobody can restore is not a backup, and a malformed file must be
-   refused before any of it is written. ---- */
+// Export and import round trip ----    An export nobody can restore is not a backup, and a malformed file must be    refused before any of it is written.
 {
   // store.js writes through localStorage and stamps settings onto the root.
   const bag = new Map();
@@ -1425,10 +1338,7 @@ function walk(region, seed, script, limit = 12) {
   delete globalThis.document;
 }
 
-/* ---- Every module parses. A syntax error takes the app down silently in a
-   browser, and a blank page passes every visual check. The file list is
-   discovered rather than declared, so a new module is covered on the day it
-   is written. ---- */
+// Every module parses. A syntax error takes the app down silently in a    browser, and a blank page passes every visual check. The file list is    discovered rather than declared, so a new module is covered on the day it    is written.
 {
   const { execFileSync } = await import('node:child_process');
   const { readdirSync, readFileSync } = await import('node:fs');

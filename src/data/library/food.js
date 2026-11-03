@@ -1,10 +1,4 @@
-/* Food and nutrition.
- *
- * Written against positions that guideline bodies and systematic reviews
- * agree on, and against the specific claims that circulate online. Where the
- * evidence is weak, that is stated rather than smoothed over. No brand is
- * named anywhere, and nothing here recommends a product.
- */
+// Food and nutrition.
 
 export const FOOD = [
   {

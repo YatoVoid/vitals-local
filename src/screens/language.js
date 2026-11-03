@@ -1,9 +1,4 @@
-/* Language picker.
- *
- * Each language is labelled in its own script, with the English name beneath.
- * Rows report what the option can do: already stored, translated on the
- * device, or needing the network service.
- */
+// Language picker.
 
 import { el, eyebrow, fieldLabel, panel, button, row, rows } from '../app/ui.js';
 import * as i18n from '../i18n/index.js';
@@ -11,8 +6,7 @@ import { LANGUAGES, findLanguages, language } from '../i18n/languages.js';
 import { ARTICLES } from '../data/library/index.js';
 import { BANKS, GENERIC } from '../triage/index.js';
 
-/* Everything the app can put on screen, for translating ahead of time. Pulled
-   from the data rather than from a hand kept list, so it cannot fall behind. */
+// Everything the app can put on screen, for translating ahead of time.
 function allStrings() {
   const out = new Set();
   const add = t => { if (typeof t === 'string' && t.trim().length > 1) out.add(t.trim()); };
@@ -77,8 +71,8 @@ export function renderLanguage(screen, { go, live }) {
       listHost.appendChild(rows(...matches.map(l => {
         const stored = i18n.stats(l.code).count;
         const cap = caps?.get(l.code);
-        /* Row state, ordered by what a reader scanning the list needs
-           first: current, stored, on device, network. */
+        // Row state, ordered by what a reader scanning the list needs first: current, stored,
+        // on device, network.
         const state =
           l.code === cur ? 'On'
           : stored ? 'Offline'
@@ -93,8 +87,7 @@ export function renderLanguage(screen, { go, live }) {
             if (l.code === cur || switching) return;
             switching = l.code;
             const endEl = r.querySelector('.row__end');
-            /* First pick downloads tens of megabytes, around ten seconds.
-               The row carries the progress so the tap has feedback. */
+            // First pick downloads tens of megabytes, around ten seconds.
             const stop = i18n.onStatus(s => {
               if (s.lang !== l.code || !endEl) return;
               if (s.phase === 'downloading') {
@@ -112,8 +105,8 @@ export function renderLanguage(screen, { go, live }) {
             window.dispatchEvent(new CustomEvent('vitals:language'));
           },
         });
-        /* The name is in its own script, so it must not be machine
-           translated into the language you are leaving. */
+        // The name is in its own script, so it must not be machine translated into the language
+        // you are leaving.
         r.setAttribute('translate', 'no');
         r.querySelector('span').setAttribute('lang', l.code);
         if (l.dir) r.querySelector('span').setAttribute('dir', l.dir);
@@ -122,9 +115,8 @@ export function renderLanguage(screen, { go, live }) {
     };
     drawList();
 
-    /* Probing sixty five languages takes a moment, so the list draws first
-       and labels itself once the answers are in. The answers are cached, so
-       this is instant every time after the first. */
+    // Probing sixty five languages takes a moment, so the list draws first and labels itself
+    // once the answers are in.
     if (!caps) {
       i18n.capabilityMap(LANGUAGES.map(l => l.code)).then(m => {
         caps = m;
@@ -132,7 +124,7 @@ export function renderLanguage(screen, { go, live }) {
       });
     }
 
-    /* ---- What this language can do ---- */
+    // What this language can do
     const capBox = panel(eyebrow('Checking what your browser can do'));
     screen.appendChild(capBox);
     i18n.describeCapability(cur).then(cap => {
@@ -151,7 +143,7 @@ export function renderLanguage(screen, { go, live }) {
       }
     });
 
-    /* ---- Offline ---- */
+    // Offline
     if (cur !== 'en') {
       const stored = i18n.stats(cur);
       const off = panel(
@@ -205,7 +197,7 @@ export function renderLanguage(screen, { go, live }) {
       screen.appendChild(off);
     }
 
-    /* ---- The warning that matters ---- */
+    // The warning that matters
     if (cur !== 'en') {
       const care = panel(
         eyebrow('Read this once'),

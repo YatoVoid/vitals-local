@@ -1,13 +1,6 @@
-/* Places.
- *
- * Every country, and enough cities to cover most people without shipping a
- * gazetteer. Coordinates are the capital or largest city, rounded to two
- * decimals, which is about a kilometre and plenty for a UV index.
- *
- * Search runs locally. Nothing is sent anywhere to find a place.
- */
+// Places.
 
-/* iso, name, capital or main city, lat, lon */
+// iso, name, capital or main city, lat, lon
 const ROWS = `
 AF|Afghanistan|Kabul|34.53|69.17
 AL|Albania|Tirana|41.33|19.82
@@ -137,8 +130,8 @@ ZM|Zambia|Lusaka|-15.39|28.32
 ZW|Zimbabwe|Harare|-17.83|31.05
 `.trim();
 
-/* Extra cities where one point per country is not enough, because these
-   countries are wide enough that UV differs meaningfully across them. */
+// Extra cities where one point per country is not enough, because these countries are wide
+// enough that UV differs meaningfully across them.
 const EXTRA = `
 US|Los Angeles|34.05|-118.24
 US|Chicago|41.88|-87.63
@@ -245,7 +238,7 @@ export const COUNTRIES = [...COUNTRY_NAME.entries()]
 
 const fold = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 
-/** Search by city or country. Local, and returns the closest matches first. */
+// Search by city or country.
 export function findPlaces(query, limit = 8) {
   const q = fold(query.trim());
   if (!q) return [];
@@ -267,12 +260,11 @@ export function findPlaces(query, limit = 8) {
   return scored.sort((a, b) => b.score - a.score).slice(0, limit).map(x => x.p);
 }
 
-/** Nearest known place to a coordinate, for the geolocation path. */
+// Nearest known place to a coordinate, for the geolocation path.
 export function nearest(lat, lon) {
   let best = null, bestD = Infinity;
   for (const p of PLACES) {
-    // Equirectangular approximation. Precise enough to pick a city from a
-    // list, and it needs no trigonometry beyond one cosine.
+    // Equirectangular approximation.
     const dLat = (p.lat - lat) * 111;
     const dLon = (p.lon - lon) * 111 * Math.cos((lat * Math.PI) / 180);
     const d = dLat * dLat + dLon * dLon;

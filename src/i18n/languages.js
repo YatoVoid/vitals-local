@@ -1,12 +1,4 @@
-/* Language table.
- *
- * The endonym is the primary label, since that is what a reader scans for.
- * The English name is secondary, for anyone setting the language on someone
- * else's behalf.
- *
- * `dir` marks right-to-left scripts. `script` selects a font stack and
- * switches off tracked uppercase, which is unreadable in most of them.
- */
+// Language table.
 
 export const LANGUAGES = [
   { code: 'en',    name: 'English',    english: 'English',    script: 'latin' },
@@ -78,11 +70,7 @@ export const LANGUAGES = [
 
 const BY_CODE = new Map(LANGUAGES.map(l => [l.code, l]));
 
-/**
- * The tag to hand the translation engine, which is not always the tag the
- * app uses. Written Cantonese is served by the Hong Kong traditional model,
- * for instance, and nothing else the engine offers comes closer.
- */
+// The tag to hand the translation engine, which is not always the tag the app uses.
 export function engineCode(code) {
   return language(code).engine ?? code;
 }
@@ -95,7 +83,7 @@ export function isRTL(code) {
   return language(code).dir === 'rtl';
 }
 
-/** Scripts where tracked uppercase is unreadable or meaningless. */
+// Scripts where tracked uppercase is unreadable or meaningless.
 const NO_CAPS = new Set(['han', 'jpan', 'hang', 'arab', 'hebr', 'deva', 'beng',
   'guru', 'taml', 'telu', 'gujr', 'thai', 'khmr', 'mymr', 'ethi', 'sinh', 'geor', 'armn']);
 
@@ -103,7 +91,7 @@ export function usesCaps(code) {
   return !NO_CAPS.has(language(code).script);
 }
 
-/** The best guess at what the person reads, from the browser. */
+// The best guess at what the person reads, from the browser.
 export function preferred() {
   for (const tag of navigator.languages ?? [navigator.language]) {
     if (!tag) continue;
@@ -118,7 +106,7 @@ export function preferred() {
   return 'en';
 }
 
-/** Search by either name, so both spellings find it. */
+// Search by either name, so both spellings find it.
 export function findLanguages(query) {
   const q = query.trim().toLowerCase();
   if (!q) return LANGUAGES;

@@ -1,17 +1,4 @@
-/* Limbs and joints.
- *
- * The knee and ankle questions are the Ottawa rules, which were built to
- * decide who needs an x-ray after an injury and are among the best validated
- * decision rules in emergency medicine. Near-perfect sensitivity for fracture
- * makes a negative set reassuring and a positive one an indication to image.
- *
- * The clause most often skipped: being unable to take four steps, both
- * immediately after the injury and now, counts on its own regardless of how
- * the joint feels.
- *
- * This bank covers all limb regions, since the useful questions after an
- * injury are the same whichever joint it is.
- */
+// Limbs and joints.
 
 export const LIMB = {
   id: 'limb',

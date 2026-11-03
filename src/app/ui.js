@@ -1,4 +1,4 @@
-/* Small builders shared by every screen. Nothing here holds state. */
+// Small builders shared by every screen.
 
 export const el = (tag, cls, text) => {
   const n = document.createElement(tag);
@@ -9,11 +9,7 @@ export const el = (tag, cls, text) => {
 
 export function eyebrow(text) { return el('p', 'eyebrow', text); }
 
-/**
- * The label above a form control. Reads at body size in the body face,
- * because it names something a person has to answer rather than decorating
- * a section. An optional unit sits after it in a lighter weight.
- */
+// The label above a form control.
 export function fieldLabel(text, unit) {
   const l = el('span', 'field-label', text);
   if (unit) {
@@ -36,7 +32,7 @@ export function button(label, cls, onClick) {
   return b;
 }
 
-/** A tappable list row with an optional trailing value and sub label. */
+// A tappable list row with an optional trailing value and sub label.
 export function row(label, { end, sub, onClick, selected } = {}) {
   const r = el('button', 'row');
   r.type = 'button';
@@ -56,11 +52,7 @@ export function rows(...kids) {
   return g;
 }
 
-/**
- * A ring gauge. Value and goal are plain numbers; the arc is a stroked
- * circle with a dash offset, so it animates on the compositor and needs no
- * per-frame maths.
- */
+// A ring gauge.
 export function ring(value, goal, unit, label) {
   const NS = 'http://www.w3.org/2000/svg';
   const pct = goal > 0 ? Math.min(value / goal, 1) : 0;
@@ -85,11 +77,7 @@ export function ring(value, goal, unit, label) {
   svg.append(track, arc);
   wrap.appendChild(svg);
 
-  /* Only the number goes inside. A circle is the worst container for a word
-     whose length changes with the language: the usable width at the unit's
-     own height is narrower than the ring looks, so anything longer than a few
-     characters crosses the stroke. The unit sits under the ring instead,
-     where it can be as long as it needs to be. */
+  // Only the number goes inside.
   const mid = el('div', 'ring__mid');
   mid.append(el('span', 'ring__val', String(value)));
   wrap.appendChild(mid);
@@ -101,7 +89,7 @@ export function ring(value, goal, unit, label) {
   return box;
 }
 
-/** A stat tile for the home grid. */
+// A stat tile for the home grid.
 export function tile(label, value, sub, onClick) {
   const t = el('button', 'tile2');
   t.type = 'button';
@@ -114,7 +102,7 @@ export function tile(label, value, sub, onClick) {
   return t;
 }
 
-/** Segmented control. Returns the wrapper; caller keeps the value. */
+// Segmented control.
 export function segmented(options, value, onPick, ariaLabel, variant) {
   const g = el('div', variant === 'hud' ? 'views views--hud' : 'views');
   g.setAttribute('role', 'group');
@@ -130,7 +118,7 @@ export function segmented(options, value, onPick, ariaLabel, variant) {
   return g;
 }
 
-/** A labelled switch built on a real checkbox, so it is keyboard native. */
+// A labelled switch built on a real checkbox, so it is keyboard native.
 export function toggle(label, checked, onChange, sub) {
   const wrap = el('label', 'switch');
   const input = el('input');
@@ -144,16 +132,7 @@ export function toggle(label, checked, onChange, sub) {
   return wrap;
 }
 
-/**
- * A list row whose tap deletes the entry, armed on the first press.
- *
- * A single tap on a whole row is easy to hit by accident, and these lists have
- * no undo. The first press turns the row into its own confirmation and states
- * what goes; the second press removes it. Moving focus away disarms it.
- *
- * @param {string} label
- * @param {{ sub?: string, end?: string, confirm?: string, onRemove: () => void }} opts
- */
+// A list row whose tap deletes the entry, armed on the first press.
 export function removableRow(label, { sub, end: endText = '', confirm = 'Remove?', onRemove }) {
   const r = row(label, { sub, end: endText });
   const end = r.querySelector('.row__end');
@@ -171,8 +150,8 @@ export function removableRow(label, { sub, end: endText = '', confirm = 'Remove?
 
   r.addEventListener('click', () => {
     if (armed) {
-      // Disarmed before the callback, so a row left on screen is not still
-      // primed to remove whatever takes its place.
+      // Disarmed before the callback, so a row left on screen is not still primed to remove
+      // whatever takes its place.
       disarm();
       onRemove();
       return;
@@ -185,17 +164,14 @@ export function removableRow(label, { sub, end: endText = '', confirm = 'Remove?
     timer = setTimeout(disarm, 4000);
   });
   r.addEventListener('blur', disarm);
-  /* Only a mouse can meaningfully leave a row. A finger lifting off the glass
-     raises pointerleave as well, so on a phone the row disarmed itself between
-     the two taps and the second tap simply armed it again. Tap twice to remove
-     could not work on a touch screen at all. */
+  // Only a mouse can meaningfully leave a row.
   r.addEventListener('pointerleave', ev => {
     if (ev.pointerType === 'mouse' || ev.pointerType === undefined) disarm();
   });
   return r;
 }
 
-/** Is motion wanted, by the setting first and the system after it. */
+// Is motion wanted, by the setting first and the system after it.
 export function motionAllowed() {
   const set = document.documentElement?.dataset?.motion;
   if (set === 'reduced') return false;
@@ -203,15 +179,7 @@ export function motionAllowed() {
   return !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 }
 
-/**
- * Redraw so that whatever is left slides into place.
- *
- * Removing the last entry takes a heading, a list and a hint out at once, and
- * everything below jumps up the height of all three. A view transition asks
- * the browser to tween between the two layouts, which is what makes it read
- * as the page settling rather than blinking. Where the API is missing, or
- * motion is turned down, the redraw happens on its own with nothing lost.
- */
+// Redraw so that whatever is left slides into place.
 export function softUpdate(redraw) {
   if (!motionAllowed() || typeof document.startViewTransition !== 'function') {
     redraw();
@@ -220,13 +188,7 @@ export function softUpdate(redraw) {
   document.startViewTransition(() => { redraw(); });
 }
 
-/**
- * Take a node out with a collapse rather than a cut.
- *
- * Measured before it is animated, because a height of auto has nothing to
- * tween from. Calls back once the space has actually closed, so a redraw
- * lands after the gap has gone rather than fighting it.
- */
+// Take a node out with a collapse rather than a cut.
 export function collapseAway(node, done) {
   if (!node || !motionAllowed()) { done(); return; }
   const h = node.getBoundingClientRect?.().height ?? 0;
@@ -249,12 +211,7 @@ export function collapseAway(node, done) {
   setTimeout(finish, 500);
 }
 
-/**
- * A number from a text field, or null when the field is empty or not numeric.
- *
- * `Number('')` is 0 and passes `Number.isFinite`, so an empty field reads as a
- * real zero unless it is checked separately.
- */
+// A number from a text field, or null when the field is empty or not numeric.
 export function numberOrNull(value) {
   const raw = String(value ?? '').trim();
   if (!raw) return null;
@@ -262,16 +219,7 @@ export function numberOrNull(value) {
   return Number.isFinite(n) ? n : null;
 }
 
-/**
- * Let a pointer drag a horizontal strip sideways.
- *
- * Touch gets this from the platform and a wheel works on a trackpad, but a
- * mouse has neither: the strip looks draggable and does nothing. One
- * delegated listener covers every strip on the page, including ones rendered
- * later, so nothing has to be wired up per screen.
- *
- * @param {HTMLElement} root
- */
+// Let a pointer drag a horizontal strip sideways.
 export function enableDragScroll(root) {
   let target = null;
   let startX = 0;
@@ -318,8 +266,7 @@ export function enableDragScroll(root) {
   root.addEventListener('pointercancel', end);
   root.addEventListener('pointerleave', end);
 
-  /* A drag that ends over a button would otherwise activate it. The click
-     fires after pointerup, so it is swallowed once in the capture phase. */
+  // A drag that ends over a button would otherwise activate it.
   root.addEventListener('click', ev => {
     if (!moved) return;
     moved = false;
@@ -328,24 +275,7 @@ export function enableDragScroll(root) {
   }, true);
 }
 
-/**
- * Let a grid be rearranged by holding an item and dragging it.
- *
- * The hold is what separates this from a scroll. A press has to stay put for
- * HOLD_MS before anything picks up, and any real movement in that window
- * cancels it, so dragging a finger down the screen never disturbs the layout.
- * Once an item is up, touch scrolling is suppressed for the rest of the
- * gesture, since the finger now belongs to the drag.
- *
- * Dragging is a pointer gesture and nothing else, so there is a keyboard route
- * as well: focus an item and press shift with an arrow key.
- *
- * @param {HTMLElement} grid
- * @param {object} opts
- * @param {(ids: string[]) => void} opts.onReorder called with the new order
- * @param {HTMLElement} [opts.live] live region for announcements
- * @param {(el: HTMLElement) => string} [opts.describe] names an item out loud
- */
+// Let a grid be rearranged by holding an item and dragging it.
 export function reorderable(grid, { onReorder, live, describe } = {}) {
   const HOLD_MS = 450;
   const SLOP = 8;          // movement that means a scroll rather than a hold
@@ -389,8 +319,7 @@ export function reorderable(grid, { onReorder, live, describe } = {}) {
     if (ev.button !== 0) return;
     const node = ev.target.closest('[data-tile]');
     if (!node || !grid.contains(node)) return;
-    /* Cleared here rather than only when a click arrives. A drag does not
-       always produce one, and a flag left behind swallows the next real tap. */
+    // Cleared here rather than only when a click arrives.
     delete grid.dataset.wasDragged;
     startX = ev.clientX; startY = ev.clientY;
     originX = ev.clientX; originY = ev.clientY;
@@ -412,8 +341,8 @@ export function reorderable(grid, { onReorder, live, describe } = {}) {
     held.style.transform =
       `translate(${ev.clientX - originX}px, ${ev.clientY - originY}px)`;
 
-    /* The held item is transparent to hit testing while up, so this finds the
-       item underneath the finger rather than the one in hand. */
+    // The held item is transparent to hit testing while up, so this finds the item underneath
+    // the finger rather than the one in hand.
     const under = document.elementFromPoint(ev.clientX, ev.clientY)?.closest('[data-tile]');
     if (!under || under === held || !grid.contains(under)) return;
 
@@ -425,8 +354,8 @@ export function reorderable(grid, { onReorder, live, describe } = {}) {
       : ev.clientX < box.left + box.width / 2 || ev.clientY < box.top + box.height / 2;
     if (!past) return;
 
-    /* Moving the node shifts everything under the pointer, so the offset the
-       transform is measured from moves with it. */
+    // Moving the node shifts everything under the pointer, so the offset the transform is
+    // measured from moves with it.
     const before = held.getBoundingClientRect();
     grid.insertBefore(held, after ? under.nextSibling : under);
     const now = held.getBoundingClientRect();
@@ -441,13 +370,13 @@ export function reorderable(grid, { onReorder, live, describe } = {}) {
   }
   grid.addEventListener('pointerleave', () => { if (!dragging) cancelHold(); });
 
-  /* Touch scrolling has to stop once an item is up, and touch-action cannot be
-     changed part way through a gesture, so the scroll is refused directly. */
+  // Touch scrolling has to stop once an item is up, and touch-action cannot be changed part way
+  // through a gesture, so the scroll is refused directly.
   grid.addEventListener('touchmove', ev => {
     if (dragging) ev.preventDefault();
   }, { passive: false });
 
-  /* A press that became a drag must not also count as a tap on the tile. */
+  // A press that became a drag must not also count as a tap on the tile.
   grid.addEventListener('click', ev => {
     if (!grid.dataset.wasDragged) return;
     delete grid.dataset.wasDragged;

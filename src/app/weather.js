@@ -1,12 +1,4 @@
-/* Local UV and air quality.
- *
- * The only outbound request besides data packs. Open-Meteo needs no key and
- * sets no cookie. Coordinates are rounded to two decimals, roughly a
- * kilometre, which is ample for a UV index.
- *
- * Degrades to typed entry: with the network off, the request failed, or
- * location declined, the screen still works and the guidance is identical.
- */
+// Local UV and air quality.
 
 const CACHE_KEY = 'vitals.weather';
 const PLACE_KEY = 'vitals.place';
@@ -15,13 +7,7 @@ const MAX_AGE_MS = 45 * 60 * 1000;   // UV moves slowly; an hour old is fine
 export { PLACES, COUNTRIES, findPlaces, nearest, placesIn } from '../data/places.js';
 import { nearest } from '../data/places.js';
 
-/**
- * Ask the device where it is, then match to the nearest known city.
- *
- * The coordinate never leaves the device: it is matched against a local list
- * and only the matched city is used for the request, which is already rounded
- * to about a kilometre. Declining is a normal outcome and is not an error.
- */
+// Ask the device where it is, then match to the nearest known city.
 export function locate({ timeout = 10000 } = {}) {
   return new Promise(resolve => {
     if (!navigator.geolocation) {
@@ -70,42 +56,24 @@ function cached() {
   } catch { return null; }
 }
 
-/**
- * The last reading held on this device, without asking the network for
- * anything. Every screen draws from this, so nothing anyone looks at is
- * waiting on a request.
- *
- * @returns {{ data: object, at: number, placeId: string, stale?: boolean } | null}
- */
+// The last reading held on this device, without asking the network for anything.
 export function lastConditions() {
   return cached();
 }
 
-/* Screens redraw when a reading lands, rather than polling for one. */
+// Screens redraw when a reading lands, rather than polling for one.
 const conditionListeners = new Set();
 
-/** Called with the new record whenever a fetch replaces the stored reading. */
+// Called with the new record whenever a fetch replaces the stored reading.
 export function onConditions(fn) {
   conditionListeners.add(fn);
   return () => conditionListeners.delete(fn);
 }
 
-/* One at a time. Home and the sun screen both ask on open, and without this
-   the second one starts a duplicate request for the same figure. */
+// One at a time.
 let inFlight = null;
 
-/**
- * Bring the stored reading up to date, if that is worth doing and possible.
- *
- * Returns null without touching the network in the cases that should not
- * cause a request at all: no place chosen yet, a reading that is still fresh,
- * or a browser that already knows it is offline. So this is safe to call on
- * every app open and every time the network comes back.
- *
- * Choosing a place is the consent. Nothing here runs until someone has, and
- * nothing else is ever sent: the request carries a city coordinate rounded to
- * two decimals and nothing about the person.
- */
+// Bring the stored reading up to date, if that is worth doing and possible.
 export function refreshIfStale({ force = false } = {}) {
   const place = savedPlace();
   if (!place) return Promise.resolve(null);
@@ -114,8 +82,8 @@ export function refreshIfStale({ force = false } = {}) {
   if (!force && hit && hit.placeId === place.id && !hit.stale) {
     return Promise.resolve(null);
   }
-  // navigator.onLine is only reliable when it says false, which is the half
-  // worth acting on: it saves a request that cannot succeed.
+  // navigator.onLine is only reliable when it says false, which is the half worth acting on: it
+  // saves a request that cannot succeed.
   if (typeof navigator !== 'undefined' && navigator.onLine === false) {
     return Promise.resolve(null);
   }
@@ -136,10 +104,7 @@ export function refreshIfStale({ force = false } = {}) {
   return inFlight;
 }
 
-/**
- * Fetch UV and air quality for a place.
- * Never throws. Returns { ok, data, error, stale, source }.
- */
+// Fetch UV and air quality for a place.
 export async function fetchConditions(place, { force = false } = {}) {
   const hit = cached();
   if (hit && !force && hit.placeId === place.id && !hit.stale) {
@@ -195,9 +160,9 @@ export async function fetchConditions(place, { force = false } = {}) {
   }
 }
 
-/* ---- Guidance ---- */
+// Guidance
 
-/** UV index to a band, per the international scale. */
+// UV index to a band, per the international scale.
 export function uvBand(uv) {
   if (uv == null) return null;
   if (uv < 3) return { key: 'low', label: 'Low', severity: 'none' };
@@ -207,8 +172,7 @@ export function uvBand(uv) {
   return { key: 'extreme', label: 'Extreme', severity: 'now' };
 }
 
-/* Fitzpatrick types, described by how skin behaves rather than by ethnicity.
-   The burn times are rough and assume unprotected skin at midday. */
+// Fitzpatrick types, described by how skin behaves rather than by ethnicity.
 export const SKIN_TYPES = [
   { id: 1, label: 'Always burns, never tans', factor: 0.55 },
   { id: 2, label: 'Burns easily, tans poorly', factor: 0.75 },
@@ -218,18 +182,14 @@ export const SKIN_TYPES = [
   { id: 6, label: 'Never burns', factor: 4.0 },
 ];
 
-/**
- * Advice for a UV index and skin type. The burn estimate is a range, not a
- * minute count: individual variation is too large for a single figure.
- */
+// Advice for a UV index and skin type.
 export function sunAdvice(uv, skinTypeId) {
   const band = uvBand(uv);
   if (!band) return null;
   const type = SKIN_TYPES.find(t => t.id === skinTypeId) ?? SKIN_TYPES[2];
 
-  /* A common approximation: minutes to redness is roughly 200 divided by the
-     UV index for mid range skin, scaled by type. Treated as an order of
-     magnitude, not a timer. */
+  // A common approximation: minutes to redness is roughly 200 divided by the UV index for mid
+  // range skin, scaled by type.
   const mins = uv > 0 ? Math.round((200 / uv) * type.factor) : null;
   const burnText = mins == null ? null
     : mins > 120 ? 'Burning is unlikely today with normal exposure.'
@@ -267,7 +227,7 @@ export function sunAdvice(uv, skinTypeId) {
   return { band, spf, burnText, lines, skinType: type };
 }
 
-/** Air quality band. Both scales are handled since the source varies. */
+// Air quality band.
 export function airBand(aqi, scale = 'eu') {
   if (aqi == null) return null;
   const eu = [
@@ -283,7 +243,7 @@ export function airBand(aqi, scale = 'eu') {
   return { label: row[1], severity: row[2], aqi, scale };
 }
 
-/** What to do about today's air, focused on exercise since that is the lever. */
+// What to do about today's air, focused on exercise since that is the lever.
 export function airAdvice(aqi, scale = 'eu') {
   const band = airBand(aqi, scale);
   if (!band) return null;

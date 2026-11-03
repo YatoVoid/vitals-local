@@ -1,8 +1,4 @@
-/* You: profile, settings, history.
- *
- * Every destructive action says what disappears before it happens, and
- * export is one tap away from delete so nobody loses anything by accident.
- */
+// You: profile, settings, history.
 
 import { el, eyebrow, fieldLabel, panel, button, row, rows, segmented, toggle, removableRow, numberOrNull } from '../app/ui.js';
 import { settings, profile, symptoms, exportAll, importAll, usage, wipe, applySettings } from '../app/store.js';
@@ -10,7 +6,7 @@ import { display as unitDisplay, store as unitStore, units as unitWords } from '
 import { metrics, energyTarget, proteinTarget, currentGoal, GOALS } from '../app/body-metrics.js';
 import { language as i18nLanguage } from '../i18n/languages.js';
 
-const THEME_NAMES = { kawaii: 'Soft', neon: 'Blue neon', crt: 'Retro CRT' };
+const THEME_NAMES = { light: 'Light', dark: 'Dark' };
 import { stats as i18nStats } from '../i18n/cache.js';
 
 const COUNTRIES = [
@@ -44,7 +40,7 @@ export function renderYou(screen, { go }) {
   screen.appendChild(box);
 }
 
-/* ---------- Settings ---------- */
+// Settings
 export function renderSettings(screen, { go, live }) {
   const draw = () => {
     screen.replaceChildren();
@@ -55,9 +51,8 @@ export function renderSettings(screen, { go, live }) {
 
     screen.appendChild(el('h2', null, 'Theme'));
     screen.appendChild(segmented(
-      [{ id: 'kawaii', label: 'Soft' },
-       { id: 'neon', label: 'Blue neon' },
-       { id: 'crt', label: 'Retro CRT' }],
+      [{ id: 'light', label: 'Light' },
+       { id: 'dark', label: 'Dark' }],
       s.theme,
       id => { settings.set({ theme: id }); live.textContent = 'Theme changed'; draw(); },
       'Theme',
@@ -71,7 +66,7 @@ export function renderSettings(screen, { go, live }) {
       'Motion',
     ));
     screen.appendChild(el('p', 'hint',
-      'Reduced turns off the scan sweep, the glow pulse, and the screen slides. '
+      'Reduced turns off the screen slides. '
       + 'System follows whatever your device already asks for.'));
 
     screen.appendChild(el('h2', null, 'Text size'));
@@ -94,8 +89,7 @@ export function renderSettings(screen, { go, live }) {
       'Units',
     ));
 
-    /* Separate from the switch above, because the two do not agree. Australia
-       and most of Europe are metric and read food energy in kilojoules. */
+    // Separate from the switch above, because the two do not agree.
     screen.appendChild(el('h2', null, 'Energy'));
     screen.appendChild(segmented(
       [{ id: 'kcal', label: 'Calories' }, { id: 'kj', label: 'Kilojoules' }],
@@ -163,8 +157,8 @@ export function renderSettings(screen, { go, live }) {
       live.textContent = 'Export saved';
     }));
 
-    /* Restoring is the other half of exporting, and the only way to carry
-       records to a new device when nothing is kept on a server. */
+    // Restoring is the other half of exporting, and the only way to carry records to a new
+    // device when nothing is kept on a server.
     const picker = el('input');
     picker.type = 'file';
     picker.accept = 'application/json,.json';
@@ -237,7 +231,7 @@ function alertLine(screen, text) {
   screen.appendChild(p);
 }
 
-/* ---------- Profile ---------- */
+// Profile
 const FIELDS = [
   { id: 'age', label: 'Age', type: 'number', hint: 'in years' },
   { id: 'sex', label: 'Sex', type: 'segment', options: ['Female', 'Male', 'Other', 'Skip'] },
@@ -280,9 +274,8 @@ export function renderProfile(screen, { live }) {
         const input = el('input', 'field');
         input.type = f.type;
         if (f.type === 'number') input.inputMode = 'numeric';
-        /* A measured field is held metric and shown in whichever system is
-           set, so switching systems relabels and reconverts without touching
-           what is stored. */
+        // A measured field is held metric and shown in whichever system is set, so switching
+        // systems relabels and reconverts without touching what is stored.
         input.value = f.measure ? (unitDisplay(p[f.id], f.measure) ?? '') : (p[f.id] ?? '');
         input.setAttribute('aria-label', f.label);
         input.addEventListener('change', () => {
@@ -295,11 +288,8 @@ export function renderProfile(screen, { live }) {
       screen.appendChild(box);
     });
 
-    /* ---- What the target is for ----
-       Maintenance answers one question, what holds this weight, and until a
-       goal was asked for that was the only answer anyone got. Someone above
-       the healthy range for their height was still shown the figure that
-       keeps them there. */
+    // What the target is for Maintenance answers one question, what holds this weight, and
+    // until a goal was asked for that was the only answer anyone got.
     const m = metrics();
     screen.appendChild(el('h2', null, 'What you want your weight to do'));
     screen.appendChild(segmented(
@@ -310,7 +300,7 @@ export function renderProfile(screen, { live }) {
     ));
 
     if (m?.band && m.direction !== 'none' && currentGoal().id === 'hold') {
-      /* Said once, plainly, and it does not overrule the choice. */
+      // Said once, plainly, and it does not overrule the choice.
       screen.appendChild(el('p', 'hint',
         m.direction === 'lose'
           ? `Your BMI of ${m.bmi} is ${m.band.label.toLowerCase()}. Holding is a `
@@ -320,7 +310,7 @@ export function renderProfile(screen, { live }) {
             + 'worth considering over holding.'));
     }
 
-    /* Derived numbers show their working rather than appearing as a verdict. */
+    // Derived numbers show their working rather than appearing as a verdict.
     const { age, sex, heightCm, weightKg, activity } = p;
     const target = energyTarget(m, currentGoal().id);
     if (target && age && heightCm && weightKg) {
@@ -374,7 +364,7 @@ export function renderProfile(screen, { live }) {
   draw();
 }
 
-/* ---------- History ---------- */
+// History
 export function renderHistory(screen, { go, live }) {
   const draw = () => {
     screen.replaceChildren();

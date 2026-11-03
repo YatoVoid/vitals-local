@@ -1,12 +1,4 @@
-/* Translation providers, in order of preference.
- *
- * 1. On device. Chrome and Edge expose a Translator API backed by a model the
- *    browser downloads once, roughly 40 MB per language pair. It then runs
- *    with the network off and sends nothing anywhere.
- * 2. A public endpoint, used only when no on-device model exists and the
- *    person has switched it on. Interface text only.
- * 3. Neither, in which case the app stays in English.
- */
+// Translation providers, in order of preference.
 
 import { engineCode } from './languages.js';
 
@@ -17,8 +9,8 @@ const STATE = {
   lastError: null,
 };
 
-/* Probing 65 languages one at a time is slow and the answer is stable, so it
-   is cached for the picker. */
+// Probing 65 languages one at a time is slow and the answer is stable, so it is cached for the
+// picker.
 const CAP_KEY = 'vitals.i18n.capability';
 
 function loadCaps() {
@@ -38,9 +30,7 @@ export function hasOnDevice() {
   return typeof self !== 'undefined' && 'Translator' in self;
 }
 
-/**
- * @returns {'unavailable'|'downloadable'|'downloading'|'available'|'unsupported'}
- */
+// @returns {'unavailable'|'downloadable'|'downloading'|'available'|'unsupported'}
 export async function onDeviceAvailability(target, { fresh = false } = {}) {
   if (!hasOnDevice()) return 'unsupported';
   loadCaps();
@@ -55,10 +45,7 @@ export async function onDeviceAvailability(target, { fresh = false } = {}) {
   return result;
 }
 
-/**
- * Capability for every language at once, for the picker.
- * @returns {Promise<Map<string, 'ondevice'|'network'|'source'>>}
- */
+// Capability for every language at once, for the picker.
 export async function capabilityMap(codes) {
   const out = new Map();
   for (const code of codes) {
@@ -70,17 +57,7 @@ export async function capabilityMap(codes) {
   return out;
 }
 
-/**
- * Get or build an on-device translator.
- *
- * `allowDownload` must only be passed from a call path with a user gesture
- * behind it. The browser rejects a model download at any other time and one
- * gesture authorises one model, so background callers leave it off and fall
- * back instead.
- *
- * @param {string} target
- * @param {{ onProgress?: (loaded: number) => void, allowDownload?: boolean }} opts
- */
+// Get or build an on-device translator.
 export async function getOnDevice(target, { onProgress, allowDownload = false } = {}) {
   if (!hasOnDevice()) return null;
   if (STATE.translators.has(target)) return STATE.translators.get(target);
@@ -118,14 +95,10 @@ export async function getOnDevice(target, { onProgress, allowDownload = false } 
   }
 }
 
-/** Why the last on-device attempt failed, or null. */
+// Why the last on-device attempt failed, or null.
 export function lastError() { return STATE.lastError ?? null; }
 
-/* ---- Network fallback ----
- *
- * MyMemory, which needs no key or account. Only interface text is sent:
- * headings, labels, article prose. Never anything a person entered.
- */
+// Network fallback MyMemory, which needs no key or account.
 const NET_ENDPOINT = 'https://api.mymemory.translated.net/get';
 
 async function translateOverNetwork(text, target) {
@@ -150,12 +123,8 @@ async function translateOverNetwork(text, target) {
   }
 }
 
-/**
- * @param {string[]} texts
- * @param {string} target
- * @param {object} opts { allowNetwork, allowDownload, onProgress, signal }
- * @returns {Promise<Map<string,string>>} source text to translated text
- */
+// @param {string[]} texts @param {string} target @param {object} opts { allowNetwork,
+// allowDownload, onProgress.
 export async function translateBatch(texts, target, opts = {}) {
   const out = new Map();
   if (!texts.length || target === 'en') return out;
@@ -183,8 +152,7 @@ export async function translateBatch(texts, target, opts = {}) {
 
   if (!opts.allowNetwork) return out;
 
-  /* One request per string, rate limited. No hard cap: stopping halfway would
-     leave the rest in English with nothing to explain why. The caller aborts. */
+  // One request per string, rate limited.
   let failures = 0;
   for (let i = 0; i < texts.length; i++) {
     if (opts.signal?.aborted) break;
@@ -197,7 +165,7 @@ export async function translateBatch(texts, target, opts = {}) {
   return out;
 }
 
-/** What the settings screen shows about the current language. */
+// What the settings screen shows about the current language.
 export async function describeCapability(target) {
   if (target === 'en') {
     return { mode: 'source', line: 'English is the language the app is written in.' };

@@ -1,11 +1,4 @@
-/* Pain episodes.
- *
- * An episode has a start date and a body site, and collects readings over
- * days. The analysis reports the trend, any shift in pattern, and symptoms
- * that appeared after the start.
- *
- * Closing an episode and deleting one are separate actions.
- */
+// Pain episodes.
 
 const KEY = 'vitals.episodes';
 
@@ -18,7 +11,7 @@ function write(list) {
   return list;
 }
 
-/** Every episode, newest first. */
+// Every episode, newest first.
 export function all() {
   return read().slice().sort((a, b) => new Date(b.startedAt) - new Date(a.startedAt));
 }
@@ -26,10 +19,7 @@ export function all() {
 export function open() { return all().filter(e => !e.closedAt); }
 export function get(id) { return read().find(e => e.id === id) ?? null; }
 
-/**
- * Start tracking. Seeded from a finished scan, so the first reading is the
- * one already given rather than one to retype.
- */
+// Start tracking.
 export function start({ region, regionLabel, painTypes, intensity, outcome, note }) {
   const list = read();
   const episode = {
@@ -39,8 +29,7 @@ export function start({ region, regionLabel, painTypes, intensity, outcome, note
     region,
     regionLabel,
     painTypes: painTypes ?? [],
-    // What the scan concluded when the episode began. Kept so a later
-    // reading can be compared against the starting picture.
+    // What the scan concluded when the episode began.
     openingCauses: (outcome?.ranked_categories ?? []).slice(0, 3).map(c => c.label),
     openingRedFlag: outcome?.red_flag?.headline ?? null,
     readings: [{
@@ -55,7 +44,7 @@ export function start({ region, regionLabel, painTypes, intensity, outcome, note
   return episode;
 }
 
-/** Add a reading to a running episode. */
+// Add a reading to a running episode.
 export function addReading(id, { intensity, note, flags }) {
   const list = read();
   const e = list.find(x => x.id === id);
@@ -79,7 +68,7 @@ export function removeReading(id, at) {
   return e;
 }
 
-/** Close an episode. It stays in the history; it stops asking for readings. */
+// Close an episode.
 export function close(id, outcome = 'resolved') {
   const list = read();
   const e = list.find(x => x.id === id);
@@ -100,20 +89,14 @@ export function reopen(id) {
   return e;
 }
 
-/** Delete for good. Only ever called behind an explicit confirmation. */
+// Delete for good.
 export function remove(id) {
   return write(read().filter(e => e.id !== id));
 }
 
 const DAY = 86400000;
 
-/**
- * Summary of the readings.
- *
- * The trend compares the average of the last three readings with the average
- * of the first three, because a single bad afternoon is noise and a person
- * checking their own chart will read it as a relapse.
- */
+// Summary of the readings.
 export function analyse(episode) {
   const r = episode.readings ?? [];
   if (!r.length) return null;
@@ -139,8 +122,7 @@ export function analyse(episode) {
   const peak = r.reduce((a, b) => (b.intensity > a.intensity ? b : a));
   const best = r.reduce((a, b) => (b.intensity < a.intensity ? b : a));
 
-  /* Anything a person ticked on a follow up that was not there at the start.
-     This is the part a memory reliably loses over two weeks. */
+  // Anything a person ticked on a follow up that was not there at the start.
   const newFlags = [...new Set(r.slice(1).flatMap(x => x.flags ?? []))];
 
   return {
@@ -171,11 +153,10 @@ function summarise({ days, count, trend, change, first, latest }) {
   return `Holding around ${latest} ${span}. Steady is not the same as stuck, but a fortnight of steady is worth a conversation.`;
 }
 
-/* An hour. Below this the readings are effectively simultaneous and time
-   cannot separate them on screen. */
+// An hour.
 const CHART_MIN_SPAN_MS = 60 * 60 * 1000;
 
-/** Points for the sparkline, normalised so the chart needs no maths. */
+// Points for the sparkline, normalised so the chart needs no maths.
 export function chartPoints(episode, width = 100, height = 34) {
   const r = episode.readings ?? [];
   if (r.length < 2) return [];
@@ -183,9 +164,8 @@ export function chartPoints(episode, width = 100, height = 34) {
   const t1 = new Date(r[r.length - 1].at).getTime();
   const span = t1 - t0;
 
-  /* Readings taken close together, which is every episode on its first day,
-     all divide down to the same x and stack into one column at the edge.
-     Space those by position instead, so the line still reads as a sequence. */
+  // Readings taken close together, which is every episode on its first day, all divide down to
+  // the same x and stack into one column at the edge.
   const byTime = span >= CHART_MIN_SPAN_MS;
 
   return r.map((x, i) => ({
@@ -198,15 +178,14 @@ export function chartPoints(episode, width = 100, height = 34) {
   }));
 }
 
-/** Does this episode span enough time for the chart to be a timeline? */
+// Does this episode span enough time for the chart to be a timeline?
 export function chartIsTimed(episode) {
   const r = episode?.readings ?? [];
   if (r.length < 2) return false;
   return new Date(r[r.length - 1].at).getTime() - new Date(r[0].at).getTime() >= CHART_MIN_SPAN_MS;
 }
 
-/* Things that were not asked at the start but change what should happen if
-   they appear later. Kept short, and worded as observations. */
+// Things that were not asked at the start but change what should happen if they appear later.
 export const FOLLOW_FLAGS = [
   { id: 'fever', label: 'A fever appeared' },
   { id: 'spreading', label: 'It is spreading' },
@@ -216,7 +195,7 @@ export const FOLLOW_FLAGS = [
   { id: 'worse-fast', label: 'Much worse in the last day' },
 ];
 
-/** A flag added mid episode is a reason to be seen, whatever the trend. */
+// A flag added mid episode is a reason to be seen, whatever the trend.
 export function flagAdvice(flags) {
   if (!flags.length) return null;
   const urgent = flags.some(f => ['weakness', 'worse-fast'].includes(f));

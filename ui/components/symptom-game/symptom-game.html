@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" data-theme="kawaii">
+<html lang="en" data-theme="light">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -64,7 +64,7 @@
     });
   };
 
-  wire('theme', 'CRT', 'Soft', on => root.dataset.theme = on ? 'crt' : 'kawaii');
+  wire('theme', 'Dark', 'Light', on => root.dataset.theme = on ? 'dark' : 'light');
   wire('dir', 'RTL', 'LTR', on => root.dir = on ? 'rtl' : 'ltr');
   wire('motion', 'Reduce motion', 'Full motion', on => root.dataset.motion = on ? 'reduced' : 'full');
 </script>

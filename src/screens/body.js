@@ -1,8 +1,4 @@
-/* Body.
- *
- * Opens on the stored profile, then the scan. Figures come from setup and any
- * gaps can be filled in place rather than on another screen.
- */
+// Body.
 
 import { el, eyebrow, fieldLabel, panel, button, segmented, numberOrNull } from '../app/ui.js';
 import { mount } from '../../ui/components/symptom-game/symptom-game.js';
@@ -44,8 +40,8 @@ export function renderBody(screen, { go, live }) {
       card.dataset.severity = m.severity;
       col.appendChild(card);
 
-      /* A bar showing where the number sits, because a figure alone does not
-         tell you how far from the range it is. */
+      // A bar showing where the number sits, because a figure alone does not tell you how far
+      // from the range it is.
       col.appendChild(bmiBar(m.bmi));
 
       if (m.whtr != null) {
@@ -94,7 +90,7 @@ export function renderBody(screen, { go, live }) {
       col.appendChild(edit);
     }
 
-    /* Episodes already open, so the scan is not the only entry point. */
+    // Episodes already open, so the scan is not the only entry point.
     const running = openEpisodes();
     if (running.length) {
       col.appendChild(el('h2', null, 'You are tracking'));
@@ -125,8 +121,7 @@ export function renderBody(screen, { go, live }) {
   draw();
 }
 
-/* A bar from 15 to 40 with the healthy band marked. Position carries the
-   message; the number is printed under it for anyone who cannot read a bar. */
+// A bar from 15 to 40 with the healthy band marked.
 function bmiBar(bmi) {
   const LO = 15, HI = 40;
   const pct = v => ((Math.min(Math.max(v, LO), HI) - LO) / (HI - LO)) * 100;

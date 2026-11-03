@@ -1,23 +1,4 @@
-/* Chest pain.
- *
- * Structure follows how chest pain is sorted in primary care. The
- * three features that define typical angina, substernal location, brought on
- * by exertion, relieved by rest or nitrate, have been the standard
- * discriminator since Diamond and Forrester set them out, and they still
- * carry the most weight of any history finding. Pleuritic quality, calf
- * swelling, immobilisation and haemoptysis are the history items from the
- * Wells criteria for pulmonary embolism. Reproducible tenderness on pressing
- * is the classic pointer to the chest wall and away from the heart.
- *
- * Likelihood ratios are set to the direction and rough magnitude reported in
- * the diagnostic accuracy literature, rounded to values a reader can sanity
- * check. They are not precise enough to publish and are not shown to the
- * person as numbers, only as an ordering.
- *
- * Priors are for adults presenting to primary care with chest pain, where
- * musculoskeletal and reflux causes dominate and cardiac causes are the
- * minority that matter most.
- */
+// Chest pain.
 
 export const CHEST = {
   id: 'chest',
@@ -326,7 +307,7 @@ export const CHEST = {
     },
   ],
 
-  /* Hard rules. Checked after every answer, and they outrank the ranking. */
+  // Hard rules.
   redFlags: [
     {
       id: 'rf.chest.acs',

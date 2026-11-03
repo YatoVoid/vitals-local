@@ -1,17 +1,4 @@
-/* Abdominal pain.
- *
- * The appendicitis questions are the history items of the Alvarado score:
- * pain that migrated to the right lower quadrant, loss of appetite, nausea,
- * tenderness there, rebound, and fever. Migration is the most useful of them
- * in the history, so it is asked early and weighted heavily.
- * The gallbladder questions follow the classic biliary colic description:
- * right upper pain after a fatty meal, coming in waves, radiating to the
- * right shoulder blade.
- *
- * Priors reflect adults with abdominal pain in primary care, where
- * indigestion, constipation and irritable bowel dominate and appendicitis is
- * uncommon but is the one that cannot be missed.
- */
+// Abdominal pain.
 
 export const ABDOMEN = {
   id: 'abdomen',
@@ -290,10 +277,7 @@ export const ABDOMEN = {
     },
     {
       id: 'q.cycle',
-      /* Not put to anyone whose profile rules it out. Written as who it does
-         not apply to, so Other and Skip are still asked: neither of those
-         says a question about periods is irrelevant. The third option below
-         stays for exactly that reason. */
+      // Not put to anyone whose profile rules it out.
       needs: { sexNot: ['Male'] },
       prompt: 'Does it track with your cycle?',
       options: [

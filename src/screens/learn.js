@@ -1,8 +1,4 @@
-/* Learn: a searchable library.
- *
- * Search runs over the full text of every article, on device. Typing a phrase
- * from the middle of a paragraph finds the article it came from.
- */
+// Learn: a searchable library.
 
 import { el, eyebrow, fieldLabel, panel, button, row, rows } from '../app/ui.js';
 import { ARTICLES, CATEGORIES, byCategory, getArticle, search, snippet, POPULAR }
@@ -20,7 +16,7 @@ export function renderLearnIndex(screen, { go, live }) {
   screen.appendChild(eyebrow('Learn'));
   screen.appendChild(el('h1', null, 'Look something up'));
 
-  /* ---- Search ---- */
+  // Search
   const form = el('form', 'searchbar');
   const input = el('input', 'field');
   input.type = 'search';
@@ -106,7 +102,7 @@ export function renderLearnIndex(screen, { go, live }) {
   drawBrowse();
 }
 
-/* ---- One article ---- */
+// One article
 export function renderArticle(id) {
   return function render(screen, { go }) {
     const a = getArticle(id);
@@ -142,7 +138,7 @@ export function renderArticle(id) {
       screen.appendChild(basis);
     }
 
-    /* Related reading, by shared tags. Cheap, and better than nothing. */
+    // Related reading, by shared tags.
     const related = ARTICLES
       .filter(x => x.id !== a.id)
       .map(x => ({ x, shared: (x.tags ?? []).filter(t => (a.tags ?? []).includes(t)).length }))

@@ -1,25 +1,11 @@
-/* BodyMap, four views, region-level detail, mirrored geometry.
- *
- * Views: front, back, left, right. Front and back share one silhouette,
- * left and right share a profile. Each view draws its centre-line shapes
- * once and its side shapes twice, the second pass through an SVG mirror
- * transform, so a limb is authored one time and stays symmetric for free.
- *
- * Side is anatomical, never positional: a front-facing figure has its left
- * on the viewer's right, and that inverts in the back view. Recording this
- * backwards files a complaint against the wrong side of a body, so the
- * mapping lives in one table with a test asserting it.
- */
+// BodyMap, four views, region-level detail, mirrored geometry.
 
 const W = 240, H = 560;
 
-/* The authoring space. Marks are stored against this, never against a crop. */
+// The authoring space.
 export const BODY_W = W, BODY_H = H;
 
-/* ---- Front and back: shapes on the centre line ----
- * Centre is x=120. Vertical bands never overlap: chest 108-180, upper
- * abdomen 180-222, lower abdomen 222-270, pelvis 270-304, leg 304-536.
- */
+// Front and back: shapes on the centre line Centre is x=120.
 const CENTRE = [
   { key: 'head',    d: 'M120 12c19 0 33 16 33 37 0 22-14 39-33 39s-33-17-33-39c0-21 14-37 33-37Z' },
   { key: 'neck',    d: 'M106 82h28v26h-28Z' },
@@ -27,11 +13,8 @@ const CENTRE = [
   { key: 'pelvis',  d: 'M92 270h56v34H92Z' },
 ];
 
-/* ---- Front and back: shapes mirrored across the centre line ----
- * The torso half occupies x 90..119, so every limb stays left of x=90.
- * A limb wider than that lands on top of the torso once the mirror pass
- * runs, which is what turns a figure into a pile of boxes.
- */
+// Front and back: shapes mirrored across the centre line The torso half occupies x 90..119, so
+// every limb stays left of x=90.
 const SIDES = [
   { key: 'shoulder', d: 'M118 106 66 118l-4 28 48-8Z' },
   { key: 'ribs',     d: 'M90 108h29v72l-27-3Z' },
@@ -46,11 +29,7 @@ const SIDES = [
   { key: 'foot',     d: 'M92 492h26v42H80Z' },
 ];
 
-/* ---- Profile: the body seen edge on, facing low x ----
- * The torso and legs hold one column at x 88..122. The arm hangs just
- * behind it at x 118..148, where an arm falls on a figure seen side on. The
- * foot is the only shape that breaks the column, since a foot points forward.
- */
+// Profile: the body seen edge on, facing low x The torso and legs hold one column at x 88..122.
 const PROFILE = [
   { key: 'head',      d: 'M120 12c19 0 33 16 33 37 0 22-14 39-33 39-18 0-30-17-30-39 0-21 12-37 30-37Z' },
   { key: 'neck',      d: 'M104 82h28v26h-28Z' },
@@ -68,8 +47,7 @@ const PROFILE = [
   { key: 'foot',      d: 'M90 460h30v44H70Z' },
 ];
 
-/* Screen side to anatomical side. `n` is the shape as authored, which
-   renders on the viewer's left; `m` is its mirror. */
+// Screen side to anatomical side.
 const SIDE_MAP = {
   front: { n: 'right', m: 'left' },
   back:  { n: 'left',  m: 'right' },
@@ -96,13 +74,13 @@ const IDS = {
   },
 };
 
-/* Regions that exist once on the body and take no side suffix. */
+// Regions that exist once on the body and take no side suffix.
 const UNSIDED = new Set([
   'head.face', 'head.back', 'neck.front', 'neck.back',
   'abdomen.upper', 'back.mid', 'pelvis', 'pelvis.back',
 ]);
 
-/** Region id for one shape in one view. */
+// Region id for one shape in one view.
 export function regionIdFor(shape, view, mirrored = false) {
   if (view === 'left' || view === 'right') {
     const base = IDS.profile[shape.key];
@@ -115,18 +93,7 @@ export function regionIdFor(shape, view, mirrored = false) {
 
 export const VIEWS = ['front', 'back', 'left', 'right'];
 
-/* ---- Zoom areas ----
- *
- * A whole body is tall and thin; the space a phone gives it is nearly square,
- * so the figure is height-bound and the limb zones come out around 30px on
- * their short axis. Cropping the viewBox to one area spends the width that
- * was going to waste and lifts every zone in that area well past 44px.
- *
- * These are crops of the same artwork, so no shape, id, or label changes and
- * a zoomed tap is the same tap.
- *
- * `box` is [x, y, width, height] in the 240 x 560 authoring space.
- */
+// Zoom areas A whole body is tall and thin; the space a phone gives it is nearly square.
 export const ZOOMS = [
   { id: 'all',   label: 'Whole body', box: [0, 0, 240, 560] },
   { id: 'head',  label: 'Head',       box: [58, 0, 124, 124] },
@@ -139,7 +106,7 @@ export function zoomById(id) {
   return ZOOMS.find(z => z.id === id) ?? ZOOMS[0];
 }
 
-/** Every region id a view can produce, in draw order. */
+// Every region id a view can produce, in draw order.
 export function regionsIn(view) {
   if (view === 'left' || view === 'right') {
     return PROFILE.map(s => regionIdFor(s, view));
@@ -165,13 +132,7 @@ function zonePath(d, id, label) {
   return p;
 }
 
-/**
- * Draw one view.
- * @param {'front'|'back'|'left'|'right'} view
- * @param {(id: string) => string} labelFor
- * @param {string} [zoomId] one of ZOOMS, defaults to the whole body
- * @returns {SVGSVGElement}
- */
+// Draw one view.
 export function renderBody(view, labelFor, zoomId = 'all') {
   const zoom = zoomById(zoomId);
   const svg = document.createElementNS(NS, 'svg');
@@ -183,8 +144,7 @@ export function renderBody(view, labelFor, zoomId = 'all') {
     ? `Body, ${view} view`
     : `${zoom.label}, ${view} view`);
 
-  /* The outline must live inside the group it traces. Outside it, the mirror
-     transform is not inherited and the trace lands twice on one half. */
+  // The outline must live inside the group it traces.
   const traceFor = shapes => {
     const p = document.createElementNS(NS, 'path');
     p.setAttribute('class', 'bodymap__trace');

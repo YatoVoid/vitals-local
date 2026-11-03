@@ -1,8 +1,4 @@
-/* Movement, training, sleep and stress.
- *
- * Written against physical activity guidelines and exercise science that has
- * replicated. Where gym advice is folklore, that is said plainly.
- */
+// Movement, training, sleep and stress.
 
 export const MOVEMENT = [
   {

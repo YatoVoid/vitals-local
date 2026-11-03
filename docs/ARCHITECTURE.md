@@ -200,7 +200,7 @@ contents, so a percentage of the element box is not a percentage of the
 figure.
 
 `tests/audit.html` measures tap targets, contrast, accessible names and
-overflow across every route, all three themes, and four viewport sizes. It
+overflow across every route, both themes, and four viewport sizes. It
 plants a known-bad node first and reports the run as meaningless if the checker
 fails to catch it.
 

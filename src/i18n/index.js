@@ -1,10 +1,4 @@
-/* Language switching and background translation.
- *
- * Cached strings are substituted synchronously on render. Anything new is
- * translated in the background and applied as it arrives. Cache keys are
- * hashes of the English source, so an app update only re-translates the
- * wording that changed.
- */
+// Language switching and background translation.
 
 import * as cache from './cache.js';
 import * as dom from './dom.js';
@@ -60,8 +54,7 @@ export function applyDocumentLanguage(lang = state.lang) {
   root.lang = lang;
   root.dir = isRTL(lang) ? 'rtl' : 'ltr';
   root.dataset.script = meta.script;
-  // Tracked uppercase is unreadable in most non-Latin scripts. One token
-  // drives it rather than a rule per component.
+  // Tracked uppercase is unreadable in most non-Latin scripts.
   root.dataset.caps = usesCaps(lang) ? 'on' : 'off';
 }
 
@@ -72,10 +65,8 @@ export function init() {
   applyDocumentLanguage();
 }
 
-/**
- * Translate content added by anything other than a screen render: sheets,
- * the symptom console swapping stages, lists redrawing.
- */
+// Translate content added by anything other than a screen render: sheets, the symptom console
+// swapping stages, lists redrawing.
 export function observe(root) {
   state.observer?.disconnect();
   state.root = root;
@@ -89,10 +80,7 @@ export function observe(root) {
   state.observer.observe(root, { childList: true, subtree: true });
 }
 
-/**
- * Translate a subtree. Cached strings land on the current frame; the rest are
- * queued and applied when they arrive.
- */
+// Translate a subtree.
 export async function translateTree(root, lang = state.lang) {
   if (!root || lang === 'en') {
     if (root) {
@@ -136,13 +124,7 @@ export async function translateTree(root, lang = state.lang) {
   return { cached: 0, fetched: results.size };
 }
 
-/**
- * Fetch the on-device model for a language.
- *
- * Must be called straight out of a user gesture with nothing slow awaited
- * first: the browser rejects the download otherwise, and one gesture is worth
- * one model. See docs/ARCHITECTURE.md.
- */
+// Fetch the on-device model for a language.
 export async function prepareLanguage(lang, onProgress) {
   if (lang === 'en') return { ready: true, mode: 'source' };
   const translator = await getOnDevice(lang, {
@@ -157,11 +139,7 @@ export async function prepareLanguage(lang, onProgress) {
   return { ready: false, mode: state.allowNetwork ? 'network' : 'none' };
 }
 
-/**
- * Switch language.
- * @param {string} lang
- * @param {() => void} rerender
- */
+// Switch language.
 export async function setLanguage(lang, rerender) {
   state.lang = lang;
   const s = readSettings();
@@ -175,7 +153,7 @@ export async function setLanguage(lang, rerender) {
   if (state.root?.isConnected) await translateTree(state.root, lang);
 }
 
-/** Fill the cache for every screen at once, for offline use. */
+// Fill the cache for every screen at once, for offline use.
 export async function pretranslate(lang, collectStrings, onProgress) {
   if (lang === 'en') return { total: 0, translated: 0 };
   const all = collectStrings();
@@ -193,7 +171,7 @@ export async function pretranslate(lang, collectStrings, onProgress) {
   return { total: unique.length, translated: results.size };
 }
 
-/** Is this language usable with the network off? */
+// Is this language usable with the network off?
 export function isOffline(lang) {
   if (lang === 'en') return true;
   return cache.stats(lang).count > 0;

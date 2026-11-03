@@ -1,18 +1,4 @@
-/* Headache.
- *
- * The screening questions cover the widely used headache red flag set:
- * sudden onset reaching peak in under a minute, systemic signs such as
- * fever, neurological deficit, older age at first onset, a clear change in
- * pattern, and headache made worse by position or straining.
- *
- * The migraine questions are the four features that carry most of the
- * diagnostic weight in the POUND description: pulsating quality, duration of
- * four to seventy two hours, one sided location, nausea, and disabling
- * intensity. Four of five present makes migraine much more likely than not.
- *
- * Priors reflect headache in primary care, where tension type headache is
- * the most common and migraine the most commonly missed.
- */
+// Headache.
 
 export const HEAD = {
   id: 'head',
@@ -281,11 +267,7 @@ export const HEAD = {
       id: 'q.age-new',
       screening: true,
       order: 6,
-      /* The age half of this is on the profile, so it is not asked again.
-         Under fifty the question is not put at all, and where the age is
-         known the wording drops the part the app can already answer. It is
-         still asked when no age has been entered, and there the age has to
-         stay in the wording, since the answer is what carries it. */
+      // The age half of this is on the profile, so it is not asked again.
       needs: { minAge: 50 },
       prompt: s => (s.profile?.age != null
         ? 'Is this a new kind of headache for you?'

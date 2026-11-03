@@ -1,7 +1,6 @@
-/* Screen level components: tiles, rings, fields, comparison columns.
- * Consumes tokens.css and app-shell.css. Adds no colour of its own. */
+/* Screen level components: tiles, rings, fields, comparison columns. */
 
-/* ---- Text size, set in Settings. Scales the whole type ramp at once. ---- */
+/* Text size, set in Settings. */
 :root[data-text="large"] { font-size: 112.5%; }
 :root[data-text="xl"]    { font-size: 125%; }
 
@@ -14,7 +13,7 @@
   text-align: center;
 }
 
-/* ---- Home tiles ---- */
+/* Home tiles */
 .tile2 {
   display: flex;
   flex-direction: column;
@@ -41,7 +40,7 @@
 .tile2__sub { color: var(--ink-dim); font-size: var(--t-small); }
 .tile2--ring { align-items: center; justify-content: space-between; }
 
-/* ---- Ring gauge ---- */
+/* Ring gauge */
 .ringbox { display: grid; justify-items: center; gap: var(--s-1); min-inline-size: 0; }
 .ring { position: relative; inline-size: 84px; block-size: 84px; }
 .ring svg { inline-size: 100%; block-size: 100%; transform: rotate(-90deg); }
@@ -54,8 +53,8 @@
   filter: drop-shadow(0 0 4px var(--accent));
   transition: stroke-dashoffset var(--d-settle) var(--ease-out);
 }
-/* The number is centred on the circle's own centre, which only works while
-   it is the single thing in here. */
+/* The number is centred on the circle's own centre, which only works while it is the single
+   thing in here. */
 .ring__mid {
   position: absolute;
   inset: 0;
@@ -92,7 +91,7 @@
   max-inline-size: 100%;
 }
 
-/* ---- Fields ---- */
+/* Fields */
 .field {
   inline-size: 100%;
   min-block-size: var(--tap);
@@ -114,14 +113,12 @@
   gap: var(--s-2);
   margin-block-start: var(--s-3);
 }
-/* The food entry carries a second number, so it gets its own track rather
-   than wrapping onto a row sized for something else. */
+/* The food entry carries a second number, so it gets its own track rather than wrapping
+   onto a row sized for something else. */
 .inline-form--pair { grid-template-columns: 1fr 5rem 5rem auto; }
 
-/* ---- Asking before removing ----
-   Sits in the row's own place rather than over the screen, so what is about
-   to go is still visible behind the question. Every value is a token, so the
-   three themes carry it without a rule each. */
+/* Asking before removing ---- Sits in the row's own place rather than over the screen, so
+   what is about to go is still visible behind the question. */
 .removing__ask {
   padding: var(--s-3) 0;
   border-block-end: var(--hairline) solid var(--hair);
@@ -137,11 +134,7 @@
 }
 .removing__acts .btn { inline-size: 100%; }
 
-/* ---- Days of the week ----
-   One joined strip rather than seven separate buttons. Spaced apart with the
-   smallest gap there is, each day came to 43px on a 360px screen, a pixel
-   under the tap target, which the audit caught in all three themes. Closing
-   the gaps gives every day 46px and reads more like a week besides. */
+/* Days of the week ---- One joined strip rather than seven separate buttons. */
 .daypick {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
@@ -175,9 +168,7 @@
   color: var(--ink);
 }
 
-/* A number with its unit underneath. Inside the box the word ran out of a
-   narrow field, and a placeholder leaves as soon as anyone types, which is
-   when it is most use. */
+/* A number with its unit underneath. */
 .stackfield { display: grid; gap: 2px; min-inline-size: 0; }
 .stackfield__unit {
   font-size: var(--t-micro);
@@ -188,7 +179,7 @@
 
 .field-row { display: grid; gap: var(--s-2); margin-block-end: var(--s-4); }
 
-/* ---- Water timeline ---- */
+/* Water timeline */
 .glasses {
   display: flex;
   flex-wrap: wrap;
@@ -209,7 +200,7 @@
   box-shadow: 0 0 8px var(--accent-wash);
 }
 
-/* ---- Medicine comparison ---- */
+/* Medicine comparison */
 .compare {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -225,8 +216,8 @@
 .compare__field { display: grid; gap: var(--s-1); margin-block-end: var(--s-3); }
 .compare__field:last-child { margin-block-end: 0; }
 
-/* Verdict rows carry a mark as well as a colour, so the result survives
-   with colour removed. */
+/* Verdict rows carry a mark as well as a colour, so the result survives with colour
+   removed. */
 .row[data-verdict] .row__end::before { margin-inline-end: var(--s-2); }
 .row[data-verdict="ok"]   { color: var(--ink); }
 .row[data-verdict="ok"]   .row__end { color: var(--accent); }
@@ -237,7 +228,7 @@
 .row[data-verdict="bad"]  .row__end::before { content: "!"; }
 .row:disabled { cursor: default; opacity: 1; }
 
-/* ---- Lab panels ---- */
+/* Lab panels */
 .lab { margin-block-end: var(--s-3); }
 .lab__line {
   display: grid;
@@ -283,7 +274,7 @@
   background: var(--sev-now-wash);
 }
 
-/* ---- Language grid ---- */
+/* Language grid */
 .langgrid {
   display: flex;
   flex-wrap: wrap;
@@ -296,7 +287,7 @@
   background: var(--accent-wash);
 }
 
-/* ---- Switch ---- */
+/* Switch */
 .switch {
   display: flex;
   align-items: center;
@@ -332,21 +323,21 @@
 }
 .switch input:focus-visible ~ .switch__track { box-shadow: var(--focus-ring); }
 
-/* ---- Segmented control reuse from the symptom console ---- */
+/* Segmented control reuse from the symptom console */
 .screen .views { margin-block-end: var(--s-3); }
 
 @media (max-width: 26rem) {
   .compare { grid-template-columns: 1fr; }
   .inline-form { grid-template-columns: 1fr auto; }
   .inline-form .field--num { grid-column: 1; }
-  /* Two numbers side by side on the row under the name, which keeps the
-     whole form to two rows on a narrow phone. */
+  /* Two numbers side by side on the row under the name, which keeps the whole form to two
+     rows on a narrow phone. */
   .inline-form--pair { grid-template-columns: 1fr 1fr auto; }
   .inline-form--pair .field { grid-column: 1 / -1; }
   .inline-form--pair .field--num { grid-column: auto; }
 }
 
-/* ---- Setup ---- */
+/* Setup */
 .dots { display: flex; gap: var(--s-2); margin-block-end: var(--s-4); }
 .dot {
   inline-size: 28px;
@@ -362,10 +353,7 @@
   margin-block-start: var(--s-6);
 }
 
-/* ---- Fit guards ----
- * The largest text setting scales the whole type ramp. These hold long
- * strings inside their box rather than letting a row push past the screen.
- */
+/* Fit guards ---- The largest text setting scales the whole type ramp. */
 .row { gap: var(--s-3); }
 .row > span:first-child { min-inline-size: 0; }
 .row__end {
@@ -375,33 +363,30 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
-/* A sub label can run long. Let it wrap rather than stretch the row. */
+/* A sub label can run long. */
 .row__sub { overflow-wrap: anywhere; }
 
-/* Headings and readouts are the first things to overflow when a word has no
-   break opportunity, such as a long medicine name. */
+/* Headings and readouts are the first things to overflow when a word has no break
+   opportunity, such as a long medicine name. */
 .screen h1, .screen h2, .card__head, .sheet__head, .tile2__val {
   overflow-wrap: break-word;
 }
 .readout-big { overflow-wrap: anywhere; }
 
-/* A field must never be wider than its column, whatever the browser's
-   default input sizing says. */
+/* A field must never be wider than its column, whatever the browser's default input sizing
+   says. */
 .field { min-inline-size: 0; max-inline-size: 100%; }
 .inline-form > * { min-inline-size: 0; }
 .compare__col { min-inline-size: 0; }
 
-/* The glass timeline wraps already; keep it from forcing a wider row when
-   the target is high. */
+/* The glass timeline wraps already; keep it from forcing a wider row when the target is
+   high. */
 .glasses { max-inline-size: 100%; }
 
 /* Ring labels are generated from numbers that can grow to five digits. */
 .ring__val { font-size: clamp(1.05rem, 0.85rem + 1vw, var(--t-h3)); }
 
-/* ---- Comparison verdicts ----
- * Each result carries a mark, a colour, and a sentence saying why. The mark
- * means the row still reads with colour removed.
- */
+/* Comparison verdicts ---- Each result carries a mark, a colour, and a sentence saying why. */
 .verdict {
   padding: var(--s-3) 0;
   border-block-end: var(--hairline) solid var(--hair);
@@ -433,7 +418,7 @@
   max-inline-size: var(--measure);
 }
 
-/* ---- Pain over time ---- */
+/* Pain over time */
 .painchart {
   margin-block: var(--s-3) var(--s-4);
   padding: var(--s-3);
@@ -493,7 +478,7 @@
   .scale { grid-template-columns: repeat(6, 1fr); }
 }
 
-/* ---- Search ---- */
+/* Search */
 .searchbar { margin-block-end: var(--s-4); }
 .searchbar .field { font-size: var(--t-lead); }
 .results:not(:empty) { margin-block-end: var(--s-5); }
@@ -523,10 +508,8 @@
 .panel[data-claim="true"] .verdict-line,
 .panel[data-claim="mostly true"] .verdict-line { color: var(--accent); }
 
-/* ---- Body tab ----
- * The tab holds its own column until a scan starts, at which point the
- * console takes the whole screen.
- */
+/* Body tab ---- The tab holds its own column until a scan starts, at which point the
+   console takes the whole screen. */
 .bodytab { block-size: 100%; overflow-y: auto; scrollbar-width: none; }
 .bodytab::-webkit-scrollbar { display: none; }
 .bodytab--scanning { overflow: hidden; }
@@ -589,7 +572,7 @@
 .caveats summary:hover { color: var(--accent); }
 .caveats p { font-size: var(--t-small); color: var(--ink-mid); }
 
-/* ---- Place picker ---- */
+/* Place picker */
 .placebar {
   display: flex;
   align-items: center;
@@ -611,12 +594,7 @@
 .placesearch { margin-block-start: var(--s-3); }
 .placesearch__hits:not(:empty) { margin-block-start: var(--s-2); }
 
-/* ---- Script aware type ----
- * Tracked uppercase is a Latin typographic device. It is unreadable in Arabic
- * and Hebrew, meaningless in Han and Kana, and it breaks the conjuncts in
- * Devanagari and the other Indic scripts, so it is switched off wholesale
- * rather than patched rule by rule.
- */
+/* Script aware type ---- Tracked uppercase is a Latin typographic device. */
 :root[data-caps="off"] {
   --label-transform: none;
   --label-track: var(--tr-normal);
@@ -635,15 +613,14 @@
   --lh-tight: 1.3;
   --lh-body: 1.7;
 }
-/* Han and Kana carry more meaning per character, so they read better a
-   little larger and with a touch more leading. */
+/* Han and Kana carry more meaning per character, so they read better a little larger and
+   with a touch more leading. */
 :root[data-script="han"], :root[data-script="jpan"], :root[data-script="hang"] {
   --t-body: clamp(1rem, 0.95rem + 0.2vw, 1.0625rem);
   --lh-body: 1.7;
 }
 
-/* The English under a machine translated urgent line. Smaller, in the Latin
-   face, always left to right whatever the surrounding direction. */
+/* The English under a machine translated urgent line. */
 .i18n-original {
   display: block;
   margin-block-start: var(--s-1);
@@ -658,13 +635,11 @@
   content: "EN ";
   font-family: var(--font-mono);
   font-size: var(--t-micro);
-  letter-spacing: var(--tr-wide);
+  letter-spacing: var(--tr-normal);
   color: var(--ink-dim);
 }
 
-/* ---- Arrangeable tiles ----
-   The lift is what tells you the tile is in hand. Everything else dims and
-   settles so the one being moved is unmistakably the subject. */
+/* Arrangeable tiles ---- The lift is what tells you the tile is in hand. */
 .grid2--arrangeable [data-tile] {
   transition: transform var(--d-quick) var(--ease), opacity var(--d-quick) var(--ease);
   /* Vertical panning stays with the page until a tile is actually picked up. */
@@ -701,9 +676,8 @@
   color: var(--ink-dim);
 }
 
-/* ---- Where a value sits inside its range ----
-   The edges are not the only thing that carries meaning, so the position is
-   drawn rather than left to be worked out from two numbers. */
+/* Where a value sits inside its range ---- The edges are not the only thing that carries
+   meaning, so the position is drawn rather than left to be worked out from two numbers. */
 .labscale { margin-block: var(--s-3) var(--s-2); }
 .labscale__track {
   position: relative;
@@ -756,19 +730,7 @@
   .labscale__marker { transition: none; }
 }
 
-/* ---- Soft theme adjustments ----
-   A hairline tuned to glow against near black disappears on cream, so the
-   parts that are drawn rather than written get a firmer line here. */
-:root[data-theme="kawaii"] .ring__track { stroke: rgb(70 60 52 / 0.16); }
-:root[data-theme="kawaii"] .ring__arc { filter: none; }
-:root[data-theme="kawaii"] .glass { border-color: var(--hair-edge); }
-:root[data-theme="kawaii"] .labscale__track {
-  background: linear-gradient(
-    to right,
-    var(--sev-soon-wash) 0%,
-    rgb(70 60 52 / 0.14) 12%,
-    rgb(70 60 52 / 0.14) 88%,
-    var(--sev-soon-wash) 100%);
-}
-:root[data-theme="kawaii"] .labscale__marker { box-shadow: 0 0 0 2px var(--panel); }
-:root[data-theme="kawaii"] .bmibar__track { background: rgb(70 60 52 / 0.12); }
+.ring__arc { filter: none; }
+.glass { border-color: var(--hair); }
+.labscale__marker { box-shadow: 0 0 0 2px var(--panel); }
+.bmibar__track { background: var(--inset); }

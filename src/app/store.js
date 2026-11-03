@@ -1,18 +1,4 @@
-/* Local store.
- *
- * One namespace per domain, all of it on this device, over localStorage.
- *
- * Sizing: a fully translated language is about 200 KB, this origin gets
- * roughly 10 MB of localStorage, and a 193 KB store reads in 0.3 ms and
- * writes in 0.4 ms. Logs grow by a few KB a year. IndexedDB would make every
- * read asynchronous for no gain at this scale.
- *
- * Data packs are the case that would need it. A national medicine register
- * runs to tens of megabytes and belongs in IndexedDB on its own, leaving
- * these records here.
- *
- * Nothing here talks to a network. There is no endpoint to talk to.
- */
+// Local store.
 
 import { dueToday, nextDose } from './schedule.js';
 
@@ -28,9 +14,7 @@ function read(name, fallback) {
   }
 }
 
-/* A full or blocked store must report the failure. Silently dropping a write
-   is indistinguishable from a save until the screen redraws without the
-   entry. */
+// A full or blocked store must report the failure.
 const writeErrorListeners = new Set();
 
 export function onWriteError(fn) {
@@ -40,7 +24,7 @@ export function onWriteError(fn) {
 
 let lastWriteFailed = false;
 
-/** Did the most recent write fail? */
+// Did the most recent write fail?
 export function writeFailed() { return lastWriteFailed; }
 
 function write(name, value) {
@@ -67,7 +51,7 @@ function write(name, value) {
   return value;
 }
 
-/** Roughly how much room the app is using, in KB, and the keys behind it. */
+// Roughly how much room the app is using, in KB, and the keys behind it.
 export function usage() {
   let total = 0;
   const byKey = [];
@@ -85,34 +69,26 @@ export function usage() {
   return { kb: Math.round(total / 1024), byKey };
 }
 
-/* The instrument theme was called med before it was named. Anyone holding the
-   old value is moved across on read rather than being reset to the default,
-   which would take their choice away. */
-const THEME_ALIASES = { med: 'neon' };
+// Older versions had three themes.
+const THEME_ALIASES = { kawaii: 'light', med: 'dark', neon: 'dark', crt: 'dark' };
 
-/* The themes that exist. Anything else, from a future version or a damaged
-   store, falls back rather than reaching the DOM as an unknown value. */
-const THEMES = ['kawaii', 'neon', 'crt'];
+// The themes that exist.
+const THEMES = ['light', 'dark'];
 
 const SETTING_DEFAULTS = {
-  theme: 'kawaii',
+  theme: 'light',
   motion: 'system',
   language: 'en',
   country: 'US',
   units: 'metric',
-  /* Its own setting rather than part of `units`, because the two do not line
-     up. Australia, New Zealand and much of Europe are metric and read energy
-     in kilojoules, so a metric or US switch cannot answer this. */
+  // Its own setting rather than part of `units`, because the two do not line up.
   energyUnit: 'kcal',
   textSize: 'normal',
 };
 
 export const settings = {
   get() {
-    /* Merged over the defaults rather than returned as found. A stored object
-       written by an older version, or restored from an export made by one, is
-       missing whatever was added since, and an absent key reaching the DOM
-       lands as the string "undefined". */
+    // Merged over the defaults rather than returned as found.
     const s = { ...SETTING_DEFAULTS, ...read('settings', {}) };
     if (THEME_ALIASES[s.theme]) s.theme = THEME_ALIASES[s.theme];
     if (!THEMES.includes(s.theme)) s.theme = SETTING_DEFAULTS.theme;
@@ -126,25 +102,24 @@ export const settings = {
   },
 };
 
-/* What the browser paints around the page: the address bar on Android, the
-   status area in a standalone window. It has to follow the theme or a light
-   app sits under a black bar. */
-const THEME_COLOR = { kawaii: '#F5EEE2', neon: '#030507', crt: '#010301' };
+// What the browser paints around the page: the address bar on Android, the status area in a
+// standalone window.
+const THEME_COLOR = { light: '#FFFFFF', dark: '#15181C' };
 
-/** Push settings onto the document so CSS can act on them. */
+// Push settings onto the document so CSS can act on them.
 export function applySettings(s = settings.get()) {
   const root = document.documentElement;
   root.dataset.theme = s.theme;
   const meta = document.querySelector?.('meta[name="theme-color"]');
-  meta?.setAttribute('content', THEME_COLOR[s.theme] ?? THEME_COLOR.kawaii);
+  meta?.setAttribute('content', THEME_COLOR[s.theme] ?? THEME_COLOR.light);
   if (s.motion === 'system') delete root.dataset.motion;
   else root.dataset.motion = s.motion;
   root.dataset.text = s.textSize;
-  // Language and direction are owned by src/i18n, which knows about every
-  // script rather than a hardcoded pair of right to left codes.
+  // Language and direction are owned by src/i18n, which knows about every script rather than a
+  // hardcoded pair of right to left codes.
 }
 
-/* A log is an append-only list of records, newest last. */
+// A log is an append-only list of records, newest last.
 function logStore(name) {
   return {
     all: () => read(name, []),
@@ -161,9 +136,7 @@ function logStore(name) {
       const d = new Date().toDateString();
       return read(name, []).filter(r => new Date(r.at).toDateString() === d);
     },
-    /* Counted back in whole days from this morning rather than by subtracting
-       hours, so a week is seven days on the calendar however the clocks moved
-       in the middle of it. */
+    // Counted back in whole days from this morning rather than by subtracting hours.
     lastDays(days) {
       const start = new Date();
       start.setHours(0, 0, 0, 0);
@@ -178,15 +151,13 @@ export const food = logStore('food_log');
 export const water = logStore('water_log');
 export const meds = logStore('medications');
 export const labs = logStore('lab_results');
-/* Doses actually taken, one entry per dose, kept apart from the medicine
-   itself so a schedule can be edited without rewriting its history. */
+// Doses actually taken, one entry per dose, kept apart from the medicine itself so a schedule
+// can be edited without rewriting its history.
 export const dosesTaken = logStore('doses_taken');
 
 export const profile = {
   get() { return read('profile', {}); },
-  /* A key set to null, undefined or NaN is removed rather than stored. A
-     cleared number field must not land as 0, which reads as a real height to
-     everything downstream and exports that way. */
+  // A key set to null, undefined or NaN is removed rather than stored.
   set(patch) {
     const next = { ...profile.get() };
     for (const [k, v] of Object.entries(patch)) {
@@ -197,7 +168,7 @@ export const profile = {
   },
 };
 
-/** Everything this device holds, as one file the person can keep. */
+// Everything this device holds, as one file the person can keep.
 export function exportAll() {
   return {
     exported_at: new Date().toISOString(),
@@ -213,16 +184,7 @@ export function exportAll() {
   };
 }
 
-/**
- * Restore a file written by exportAll.
- *
- * The only route between two devices, since nothing is kept on a server.
- * The whole file is validated before any of it is written, so a wrong or
- * damaged file cannot leave the store half replaced.
- *
- * @param {unknown} data parsed JSON
- * @returns {{ ok: boolean, error?: string, counts?: Record<string, number> }}
- */
+// Restore a file written by exportAll.
 export function importAll(data) {
   if (!data || typeof data !== 'object') {
     return { ok: false, error: 'That file is not readable as an export.' };
@@ -278,29 +240,14 @@ export function wipe(which = 'all') {
   localStorage.removeItem(key(map[which] ?? which));
 }
 
-/**
- * The energy figure to measure a day against when the profile is too empty to
- * work one out.
- *
- * A filled profile gets an equation using height, weight, age and activity.
- * With nothing to put in it, the only honest answer is a published reference
- * intake, and there are two of those rather than one. A single figure for
- * everyone lands about 600 kcal above what an average woman at low activity
- * actually needs, which is the same mistake as quoting one haemoglobin range
- * to everybody.
- *
- * 2000 and 2500 are the reference intakes used by the UK health service and
- * by EU food labelling, where 2000 is also the figure printed on packaging
- * for the average adult. Sex is the only thing being read here, so an unset
- * profile takes 2000, the lower and more widely printed of the two.
- */
+// The energy figure to measure a day against when the profile is too empty to work one out.
 export function referenceEnergy(p = profile.get()) {
   if (p.kcalGoal) return p.kcalGoal;
   return p.sex === 'Male' ? 2500 : 2000;
 }
 
 
-/** What is outstanding today, and when the next dose falls. */
+// What is outstanding today, and when the next dose falls.
 export function medsToday(now = new Date()) {
   const list = meds.all();
   const day = dueToday(list, dosesTaken.all(), now);
@@ -311,7 +258,7 @@ export function medsToday(now = new Date()) {
   return { count: list.length, ...day, next: soonest };
 }
 
-/** Counts for the home dashboard, computed on read rather than stored. */
+// Counts for the home dashboard, computed on read rather than stored.
 export function summary() {
   const w = water.today().reduce((n, r) => n + (r.ml ?? 0), 0);
   const eaten = food.today();
@@ -324,22 +271,13 @@ export function summary() {
     // Absent on older entries, so it counts as none rather than breaking.
     proteinG: eaten.reduce((n, r) => n + (r.proteinG ?? 0), 0),
     lastSymptom: last ?? null,
-    /* From the schedule and what has actually been marked, rather than a
-       flag set when the medicine was added and never cleared, which counted
-       every medicine as due forever. */
+    // From the schedule and what has actually been marked, rather than a flag set when the
+    // medicine was added and never cleared.
     meds: medsToday(),
   };
 }
 
-/**
- * Energy over the last seven days, and the daily average across them.
- *
- * The screen says the weekly total is what moves weight, and until this
- * existed it only ever showed today, so it was asserting something it could
- * not show. The average divides by days that have an entry rather than by
- * seven, since a day nobody logged is a day with no data, not a day of
- * nothing eaten.
- */
+// Energy over the last seven days, and the daily average across them.
 export function weekEnergy() {
   const rows = food.lastDays(7);
   const kcal = rows.reduce((n, r) => n + (r.kcal ?? 0), 0);

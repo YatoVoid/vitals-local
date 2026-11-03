@@ -1,33 +1,15 @@
-/* Blood test markers, and what a number actually means.
- *
- * A reference interval is the central 95% of a reference population. Two
- * things follow that people are rarely told. One in twenty healthy people sit
- * outside it by arithmetic alone. And sitting just inside it says only that
- * you resemble that population, not that the value is comfortable for you.
- *
- * For several of these markers the threshold that changes what anyone does is
- * not the edge of the range at all. Ferritin is the clearest case: plenty of
- * laboratories report from 15 upward, while iron deficiency is treated from
- * below 30. So each marker carries zones with the thresholds that are acted
- * on, and each zone says what that band means.
- *
- * Sources are named per marker. Where two bodies use different cut offs, both
- * are given rather than one being picked silently.
- */
+// Blood test markers, and what a number actually means.
 
-/**
- * Zones are read in order and the first whose `upTo` the value does not exceed
- * wins, so they must be listed low to high with the last one open ended.
- */
+// Zones are read in order and the first whose `upTo` the value does not exceed wins, so they
+// must be listed low to high with the last one open ended.
 export const MARKERS = [
   {
     id: 'hb',
     label: 'Haemoglobin',
     unit: 'g/L',
     step: 1,
-    /* The single biggest error in reading your own haemoglobin is using
-       somebody else's threshold: the anaemia cut off differs by about
-       10 g/L between men and women. */
+    // The single biggest error in reading your own haemoglobin is using somebody else's
+    // threshold: the anaemia cut off differs by about 10 g/L between men and women.
     rangeFor: p => (p?.sex === 'Female'
       ? { low: 120, high: 155, pop: 'non-pregnant adult women, WHO thresholds' }
       : { low: 130, high: 170, pop: 'adult men, WHO thresholds' }),
@@ -188,7 +170,7 @@ export const MARKERS = [
     label: 'HbA1c',
     unit: 'mmol/mol',
     step: 1,
-    /* No lower bound worth flagging, so the range is a ceiling. */
+    // No lower bound worth flagging, so the range is a ceiling.
     rangeFor: () => ({ low: null, high: 41, pop: 'adults, not pregnant' }),
     zonesFor: () => [
       { upTo: 41, key: 'ok', severity: 'none',
@@ -213,14 +195,7 @@ export const MARKERS = [
   },
 ];
 
-/**
- * Where a value sits and what that band means.
- *
- * @param {object} marker one of MARKERS
- * @param {number} value
- * @param {object} [profile] used where the range depends on it
- * @returns {{ zone, range, position, outside } | null}
- */
+// Where a value sits and what that band means.
 export function assess(marker, value, profile) {
   if (value == null || !Number.isFinite(value)) return null;
   const range = marker.rangeFor(profile);
@@ -229,8 +204,7 @@ export function assess(marker, value, profile) {
 
   const low = range.low ?? 0;
   const span = range.high - low;
-  /* Where in the range the value falls, 0 at the bottom and 1 at the top.
-     Null when it is outside, since a position only means something inside. */
+  // Where in the range the value falls, 0 at the bottom and 1 at the top.
   const position = span > 0 && value >= low && value <= range.high
     ? (value - low) / span
     : null;
@@ -243,7 +217,7 @@ export function assess(marker, value, profile) {
   };
 }
 
-/** What a reference interval is, said once where it is needed. */
+// What a reference interval is, said once where it is needed.
 export const RANGE_NOTE =
   'A reference interval is the middle 95 percent of a reference population, '
   + 'so one healthy person in twenty falls outside it by arithmetic alone. '

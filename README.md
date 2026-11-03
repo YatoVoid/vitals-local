@@ -16,8 +16,8 @@ it, and every screen still works from typed values.
 |---|---|
 | ![Home, showing water, energy, sun and air](docs/media/home.png) | ![Food and energy, with the target worked out from the profile](docs/media/food.png) |
 | Today at a glance. Tiles are rearranged by holding one and dragging it. | Energy against a target built from your own height, weight, age and goal. |
-| ![A lab value placed inside its range](docs/media/labs.png) | ![The same screen in the blue neon theme](docs/media/neon.png) |
-| A value gets the band it falls in, not just whether it cleared the range. | Three themes. Same layout, same words, different surface. |
+| ![A lab value placed inside its range](docs/media/labs.png) | ![Home in the dark theme](docs/media/dark.png) |
+| A value gets the band it falls in, not just whether it cleared the range. | Light and dark. Same layout, same words. |
 
 ## Running it
 
@@ -119,7 +119,7 @@ src/
   screens/               one module per screen
   triage/                clinical question banks and the inference engine
 ui/
-  themes/tokens.css      colour, type, spacing, motion. Three themes.
+  themes/tokens.css      colour, type, spacing, motion. Light and dark.
   layout/                shell and screen-level CSS
   components/            symptom console
 tests/                   node test suite and browser harnesses
@@ -139,7 +139,7 @@ and import, and that every module parses.
 Browser harnesses live in `tests/`:
 
 - `audit.html` measures contrast, tap targets, accessible names and overflow
-  across every route, all three themes, and four viewport sizes. It plants a
+  across every route, both themes, and four viewport sizes. It plants a
   known-bad node first and refuses to report a clean run if the checker fails
   to catch it.
 - `i18n.html` audits translation coverage per language.

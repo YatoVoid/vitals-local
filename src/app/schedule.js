@@ -1,26 +1,6 @@
-/* When a medicine is meant to be taken.
- *
- * One shape covers every pattern people actually get given: a set of times of
- * day, and a set of weekdays those times apply to.
- *
- *   Every morning          times ['08:00'],                 every day
- *   Twice a day            times ['08:00','20:00'],         every day
- *   Once a week            times ['09:00'],                 Monday
- *   Weekdays only          times ['08:00'],                 Monday to Friday
- *   Three times a day,     times ['08:00','14:00','20:00'], Tuesday and Friday
- *   two days a week
- *
- * Anything more elaborate than that, alternate days or a tapering course, is
- * deliberately not modelled. A schedule this app cannot describe honestly is
- * worse than one it declines to hold, because a missed dose is the failure
- * that matters.
- *
- * Times are local wall clock strings, not instants. A person taking a tablet
- * at eight in the morning means eight wherever they are, and storing an offset
- * would move the dose when they travel.
- */
+// When a medicine is meant to be taken.
 
-/** Sunday first, matching Date.getDay. */
+// Sunday first, matching Date.getDay.
 export const DAYS = [
   { n: 0, short: 'Sun', label: 'Sunday' },
   { n: 1, short: 'Mon', label: 'Monday' },
@@ -40,7 +20,7 @@ const minutes = hhmm => {
   return (Number.isFinite(h) ? h : 0) * 60 + (Number.isFinite(m) ? m : 0);
 };
 
-/** A medicine record with its schedule filled in, whatever version wrote it. */
+// A medicine record with its schedule filled in, whatever version wrote it.
 export function normalise(med) {
   const times = Array.isArray(med?.times) && med.times.length
     ? [...med.times].sort((a, b) => minutes(a) - minutes(b))
@@ -51,16 +31,13 @@ export function normalise(med) {
   return { ...med, times, days };
 }
 
-/** The times due on one date, earliest first. Empty on a day it is not taken. */
+// The times due on one date, earliest first.
 export function timesOn(med, date = new Date()) {
   const s = normalise(med);
   return s.days.includes(date.getDay()) ? s.times : [];
 }
 
-/**
- * The next dose from a moment, looking up to a week ahead.
- * @returns {{ time: string, date: Date, today: boolean } | null}
- */
+// The next dose from a moment, looking up to a week ahead.
 export function nextDose(med, from = new Date()) {
   const s = normalise(med);
   if (!s.times.length) return null;
@@ -78,12 +55,7 @@ export function nextDose(med, from = new Date()) {
   return null;
 }
 
-/**
- * How a schedule reads in a sentence.
- *
- * Written the way somebody would say it rather than as a rule, so "Mon, Wed,
- * Fri at 08:00" instead of a list of fields.
- */
+// How a schedule reads in a sentence.
 export function describe(med) {
   const s = normalise(med);
   if (!s.times.length) return 'No time set';
@@ -104,17 +76,7 @@ export function describe(med) {
   return `${names} at ${when}`;
 }
 
-/**
- * What is outstanding today, across every medicine.
- *
- * A dose counts as done once it has been marked, and as late once its time has
- * passed. Nothing is inferred from the clock alone: an unmarked dose stays
- * outstanding rather than being assumed taken.
- *
- * @param {Array} meds
- * @param {Array} takenLog entries of { medId, day, time }
- * @param {Date} now
- */
+// What is outstanding today, across every medicine.
 export function dueToday(meds, takenLog = [], now = new Date()) {
   const today = dayKey(now);
   const done = new Set(

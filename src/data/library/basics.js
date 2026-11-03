@@ -1,6 +1,5 @@
-/* Foundations: what cancer is, what moves risk, and how to read a health
- * claim without needing a statistics degree.
- */
+// Foundations: what cancer is, what moves risk, and how to read a health claim without needing
+// a statistics degree.
 
 export const BASICS = [
   {

@@ -1,10 +1,4 @@
-/* Claims that circulate, checked.
- *
- * Each entry states the claim as it circulates, gives a verdict, and explains
- * the mechanism behind it rather than asserting the answer.
- *
- * Verdicts: false, mostly false, mixed, mostly true, true.
- */
+// Claims that circulate, checked.
 
 export const CLAIMS = [
   {

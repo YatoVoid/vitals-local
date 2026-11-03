@@ -1,12 +1,4 @@
-/* The library, and search over it.
- *
- * Everything is local. Search runs against the full text of every article, so
- * a phrase from the middle of a paragraph finds the article it came from.
- *
- * Sourcing rule for everything in here: positions from guideline bodies,
- * systematic reviews, and pharmacopoeia. No blogs, no news write ups, no
- * industry funded material, and no product is named or recommended anywhere.
- */
+// The library, and search over it.
 
 import { FOOD } from './food.js';
 import { MOVEMENT } from './movement.js';
@@ -26,13 +18,7 @@ export function byCategory(category) {
   return ARTICLES.filter(a => a.category === category);
 }
 
-/* ---- Search ----
- *
- * A small inverted index built once, on first use. Scoring favours a hit in
- * the title over a hit in a tag over a hit in the body, and rewards matching
- * more of the query rather than matching one word many times, which is what
- * makes a two word query behave sensibly.
- */
+// Search A small inverted index built once, on first use.
 
 const STOP = new Set([
   'a', 'an', 'and', 'are', 'as', 'at', 'be', 'but', 'by', 'can', 'do', 'does',
@@ -47,8 +33,7 @@ const tokenise = text => String(text)
   .split(/\s+/)
   .filter(w => w.length > 1 && !STOP.has(w));
 
-/* Crude but effective stemming for the handful of endings that matter in
-   health words. A full stemmer would be more code than the problem needs. */
+// Crude but effective stemming for the handful of endings that matter in health words.
 function stem(word) {
   return word
     .replace(/(ies)$/, 'y')
@@ -80,11 +65,7 @@ function build() {
   INDEX = idx;
 }
 
-/**
- * @param {string} query
- * @param {number} limit
- * @returns {Array<{article, score, why}>}
- */
+// @param {string} query @param {number} limit @returns {Array<{article, score, why}>}
 export function search(query, limit = 12) {
   if (!INDEX) build();
   const terms = [...new Set(tokenise(query).map(stem))];
@@ -92,8 +73,8 @@ export function search(query, limit = 12) {
 
   const scores = new Map();     // id -> { score, matched:Set }
   for (const t of terms) {
-    // Exact stem first, then any indexed stem starting with it, so a partial
-    // word still finds something rather than returning nothing.
+    // Exact stem first, then any indexed stem starting with it, so a partial word still finds
+    // something rather than returning nothing.
     const buckets = INDEX.has(t)
       ? [INDEX.get(t)]
       : [...INDEX.entries()].filter(([k]) => k.startsWith(t) && t.length >= 3).map(([, v]) => v);
@@ -111,8 +92,8 @@ export function search(query, limit = 12) {
   return [...scores.entries()]
     .map(([id, s]) => ({
       article: getArticle(id),
-      // Matching more of the query counts for more than matching one word
-      // repeatedly, which is what stops a long article winning everything.
+      // Matching more of the query counts for more than matching one word repeatedly, which is
+      // what stops a long article winning everything.
       score: s.score * (s.matched.size / terms.length) ** 2,
       why: [...s.matched],
     }))
@@ -121,7 +102,7 @@ export function search(query, limit = 12) {
     .slice(0, limit);
 }
 
-/** The line of body text a hit came from, for the result list. */
+// The line of body text a hit came from, for the result list.
 export function snippet(article, query) {
   const terms = tokenise(query).map(stem);
   if (!terms.length) return article.summary;
@@ -140,7 +121,7 @@ export function snippet(article, query) {
   return article.summary;
 }
 
-/** Suggestions for an empty search box, drawn from real tags. */
+// Suggestions for an empty search box, drawn from real tags.
 export const POPULAR = [
   'protein', 'sunscreen', 'back pain', 'sleep', 'detox', 'seed oils',
   'how much water', 'stretching', 'sugar and cancer', 'vitamin d',

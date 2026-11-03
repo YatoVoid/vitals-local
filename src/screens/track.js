@@ -1,8 +1,4 @@
-/* Track: food, water, medicines, lab results.
- *
- * Every number on these screens shows its own arithmetic on tap. Nothing is
- * a black box, and nothing here produces a dose.
- */
+// Track: food, water, medicines, lab results.
 
 import { el, eyebrow, fieldLabel, panel, button, row, rows, ring, segmented, removableRow, numberOrNull, collapseAway, softUpdate } from '../app/ui.js';
 import { food, water, meds, labs, dosesTaken, summary, weekEnergy, profile } from '../app/store.js';
@@ -13,14 +9,13 @@ import { energy as showEnergy, energyUnit, storeEnergy } from '../app/units.js';
 import { dailyEnergy, dailyProtein, currentGoal } from '../app/body-metrics.js';
 import { DAYS, EVERY_DAY, describe, dueToday, nextDose, dayKey } from '../app/schedule.js';
 
-/* "gl" is not an abbreviation anyone uses, and it read as a word cut off
-   halfway. The row has room for the whole word. */
+// "gl" is not an abbreviation anyone uses, and it read as a word cut off halfway.
 const glassCount = ml => {
   const n = Math.round(ml / 250);
   return `${n} ${n === 1 ? 'glass' : 'glasses'}`;
 };
 
-/* ---------- Index ---------- */
+// Index
 export function renderTrackIndex(screen, { go }) {
   const s = summary();
   const goalKcal = dailyEnergy();
@@ -37,8 +32,8 @@ export function renderTrackIndex(screen, { go }) {
   ));
 }
 
-/* The row reports the day rather than a count of medicines, which said the
-   same thing whether every dose was taken or none were. */
+// The row reports the day rather than a count of medicines, which said the same thing whether
+// every dose was taken or none were.
 const medsEnd = m => (!m.count ? 'None' : m.total ? `${m.outstanding} of ${m.total}` : 'None today');
 const medsSub = m => {
   if (!m.count) return 'Set up a reminder, or compare two labels';
@@ -46,16 +41,7 @@ const medsSub = m => {
   return m.outstanding ? 'Still to take today' : 'All taken today';
 };
 
-/* ---------- Food ----------
- *
- * The shortcuts are whatever this person eats, worked out from their own log.
- * A fixed list cannot be right in 65 languages: it was six English items, so
- * anyone whose breakfast is not oatmeal started every day by typing. Their own
- * entries are already in their own language and their own portions.
- *
- * The starter set below is only for a log with nothing in it yet, and is kept
- * short and staple on purpose rather than trying to represent anywhere.
- */
+// Food The shortcuts are whatever this person eats, worked out from their own log.
 const STARTER_FOODS = [
   { name: 'Rice, bowl', kcal: 205, proteinG: 4 },
   { name: 'Egg', kcal: 78, proteinG: 6 },
@@ -63,14 +49,7 @@ const STARTER_FOODS = [
   { name: 'Tea or coffee', kcal: 5, proteinG: 0 },
 ];
 
-/**
- * The shortcuts to offer: most often logged first, then most recent.
- *
- * Energy is the median of what was logged under that name rather than the
- * mean, so one mistyped entry of 6000 does not drag the shortcut with it.
- *
- * @param {Array} log every food entry, oldest first
- */
+// The shortcuts to offer: most often logged first, then most recent.
 export function quickFoods(log, limit = 6) {
   if (!log.length) return STARTER_FOODS.map(f => ({ ...f, fromLog: false }));
 
@@ -103,8 +82,8 @@ export function quickFoods(log, limit = 6) {
     }));
 }
 
-/* Whole, half and double, because a portion is usually one of those and a
-   number field for every tap would undo the point of a shortcut. */
+// Whole, half and double, because a portion is usually one of those and a number field for
+// every tap would undo the point of a shortcut.
 const PORTIONS = [
   { id: 'half', label: 'Half', factor: 0.5 },
   { id: 'one', label: 'One', factor: 1 },
@@ -140,12 +119,7 @@ export function renderDiet(screen, { go, live }) {
     }
     screen.appendChild(head);
 
-    /* Show the maths rather than a verdict.
-
-       The difference is taken between the two figures on screen rather than
-       converted on its own. Rounding each of the three separately gave a line
-       that did not add up in kilojoules, and a sum that fails in front of the
-       reader is worse than no sum. */
+    // Show the maths rather than a verdict.
     const shownEaten = showEnergy(s.kcal);
     const shownTarget = showEnergy(goalKcal);
     const shownGap = shownEaten - shownTarget;
@@ -161,8 +135,7 @@ export function renderDiet(screen, { go, live }) {
     math.style.marginBlockStart = 'var(--s-3)';
     screen.appendChild(math);
 
-    /* The line above talks about a run of days, so the run of days has to be
-       here. Until it was, the screen made a claim it could not show. */
+    // The line above talks about a run of days, so the run of days has to be here.
     if (week.days > 1) {
       const wk = panel(
         eyebrow('The last seven days'),
@@ -198,18 +171,13 @@ export function renderDiet(screen, { go, live }) {
         live.textContent = `${f.name} added`;
         draw();
       });
-      /* A name out of the log is what this person typed, in their language.
-         Running their own diary through the translator would rewrite it. The
-         starter names are app text and are left to translate normally. */
+      // A name out of the log is what this person typed, in their language.
       if (f.fromLog) b.setAttribute('translate', 'no');
       quick.appendChild(b);
     });
     screen.appendChild(quick);
 
-    /* The unit sits under each box rather than inside it. As placeholder text
-       "protein g" ran out of a number field on a narrow phone, and a
-       placeholder disappears the moment anyone types, which is exactly when
-       they might want to check which box they are in. */
+    // The unit sits under each box rather than inside it.
     const custom = el('form', 'inline-form inline-form--pair');
     const nameField = el('input', 'field');
     nameField.placeholder = 'What did you eat';
@@ -227,9 +195,7 @@ export function renderDiet(screen, { go, live }) {
 
     const kcalBox = numbered('', energyUnit(), `Energy in ${energyUnit()}`);
     const kcalField = kcalBox.input;
-    /* Protein is optional. Asking for it as a required second number would
-       cost every entry a lookup, and a day of entries with it missing is
-       still a usable day of energy. */
+    // Protein is optional.
     const proBox = numbered('', 'protein, g', 'Protein in grams, optional');
     const proField = proBox.input;
 
@@ -245,8 +211,7 @@ export function renderDiet(screen, { go, live }) {
       const n = nameField.value.trim();
       const k = numberOrNull(kcalField.value);
       const g = numberOrNull(proField.value);
-      /* Both halves are required, and the reason is shown. A button that
-         silently declines reads as broken. */
+      // Both halves are required, and the reason is shown.
       if (!n) {
         customHint.textContent = 'Give it a name first.';
         nameField.focus();
@@ -269,9 +234,7 @@ export function renderDiet(screen, { go, live }) {
 
     const today = food.today();
 
-    /* Adding is one tap, so taking it back is one tap, the same as water.
-       Typing a figure into the wrong row is easier here than there, and the
-       only way out was finding the entry and pressing it twice. */
+    // Adding is one tap, so taking it back is one tap, the same as water.
     if (today.length) {
       const last = today[today.length - 1];
       const undo = button(`Remove last, ${last.name}`, 'chipbtn chipbtn--undo', () => {
@@ -308,7 +271,7 @@ export function renderDiet(screen, { go, live }) {
   draw();
 }
 
-/* ---------- Water ---------- */
+// Water
 export function renderHydration(screen, { live }) {
   const GLASS = 250;
   const draw = () => {
@@ -326,8 +289,8 @@ export function renderHydration(screen, { live }) {
     );
     screen.appendChild(head);
 
-    /* A timeline of glasses reads faster than a number when the target is
-       checking whether you drank anything since lunch. */
+    // A timeline of glasses reads faster than a number when the target is checking whether you
+    // drank anything since lunch.
     const line = el('div', 'glasses');
     for (let i = 0; i < goal; i++) {
       const g = el('i', 'glass');
@@ -349,9 +312,7 @@ export function renderHydration(screen, { live }) {
       }));
     });
 
-    /* Adding is one tap, so taking it back has to be one tap as well. Without
-       this the only way out of a stray tap is to find the entry in the list
-       below and press it twice. */
+    // Adding is one tap, so taking it back has to be one tap as well.
     const last = today[today.length - 1];
     const undo = button(
       last ? `Remove last, ${last.ml} ml` : 'Remove last',
@@ -390,13 +351,9 @@ export function renderHydration(screen, { live }) {
   draw();
 }
 
-/* ---------- Medicines ----------
- * The app reports what two labels say and where they differ. It never
- * produces a dose, a schedule, or advice to swap one for another.
- */
+// Medicines The app reports what two labels say and where they differ.
 
-/* Dosage forms equivalent on a label. A film coating changes how a tablet is
-   swallowed, not what is in it. Modified-release forms are excluded. */
+// Dosage forms equivalent on a label.
 const FORM_GROUPS = [
   ['tablet', 'film coated tablet', 'coated tablet', 'sugar coated tablet'],
   ['capsule', 'hard capsule', 'soft capsule', 'gelatin capsule'],
@@ -404,8 +361,7 @@ const FORM_GROUPS = [
   ['effervescent tablet', 'soluble tablet', 'dispersible tablet'],
 ];
 
-/* These never fold into the plain form. They change how fast the drug
-   arrives, which changes how it behaves in the body. */
+// These never fold into the plain form.
 const MODIFIED = ['modified release', 'extended release', 'slow release',
   'prolonged release', 'sustained release', 'controlled release',
   'gastro resistant', 'enteric coated'];
@@ -434,8 +390,8 @@ function formVerdict(a, b) {
        + 'different amount reaches you. Worth asking about.' };
 }
 
-/* Strength is compared as a number and a unit, because 500 mg and 0.5 g are
-   the same amount written two ways, and a bare number means nothing. */
+// Strength is compared as a number and a unit, because 500 mg and 0.5 g are the same amount
+// written two ways, and a bare number means nothing.
 function parseStrength(v) {
   const m = norm(v).match(/([\d.,]+)\s*(mcg|micrograms?|ug|mg|g|iu|units?|ml|%)?/);
   if (!m) return null;
@@ -477,10 +433,7 @@ function routeVerdict(a, b) {
 }
 
 export function renderMeds(screen, { live }) {
-  /* Doses first. This screen is reached from a tab called Track, and the label
-     comparison used to sit above the schedule, so anyone here to keep on top
-     of their medicines had to scroll past a tool for a different job to find
-     the one they came for. */
+  // Doses first.
   const draw = () => {
     screen.replaceChildren();
     drawDoses();
@@ -489,7 +442,7 @@ export function renderMeds(screen, { live }) {
     drawCompare();
   };
 
-  /* ---- Today ---- */
+  // Today
   function drawDoses() {
     const list = meds.all();
     screen.appendChild(eyebrow('Medicines'));
@@ -533,8 +486,8 @@ export function renderMeds(screen, { live }) {
         end: d.taken ? 'Taken' : 'Take',
         onClick: () => {
           if (d.taken) {
-            /* Marked by mistake is a normal thing to do, and leaving no way
-               back would make the count lie for the rest of the day. */
+            // Marked by mistake is a normal thing to do, and leaving no way back would make the
+            // count lie for the rest of the day.
             const hit = dosesTaken.all().find(t =>
               t.medId === d.med.id && t.time === d.time && t.day === dayKey(new Date()));
             if (hit) dosesTaken.remove(hit.id);
@@ -556,17 +509,14 @@ export function renderMeds(screen, { live }) {
       'Tap a dose to mark it taken, and tap it again to put it back.'));
   }
 
-  /* ---- Everything on the list ---- */
+  // Everything on the list
   function drawList() {
     const list = meds.all();
     if (!list.length) return;
     screen.appendChild(el('h2', null, 'Your medicines'));
 
     const group = rows(...list.map(m => {
-      /* A second tap asks rather than deletes. A medicine carries a schedule
-         somebody set up, so losing one to a stray tap costs more than losing
-         a glass of water, and the row gives no sign of what is about to go
-         until it has gone. */
+      // A second tap asks rather than deletes.
       const wrap = el('div', 'removing');
       const r = removableRow(m.name, {
         sub: describe(m),
@@ -579,14 +529,11 @@ export function renderMeds(screen, { live }) {
 
       function ask() {
         if (wrap.querySelector('.removing__ask')) return;
-        /* The row stays where it is, so what is about to go is still in front
-           of the person answering. It is only made untappable, which keeps its
-           colours rather than greying the name out. */
+        // The row stays where it is, so what is about to go is still in front of the person
+        // answering.
         r.disabled = true;
         const box = el('div', 'removing__ask');
-        /* One whole sentence, with no name spliced into it. Built from pieces
-           it reached the translator as fragments, and a fragment has none of
-           the context a sentence gives it. The name is on the row above. */
+        // One whole sentence, with no name spliced into it.
         const q = el('p', 'removing__q', 'Remove this medicine and its schedule?');
         const buttons = el('div', 'removing__acts');
         const cancel = () => { box.remove(); r.disabled = false; };
@@ -613,7 +560,7 @@ export function renderMeds(screen, { live }) {
   }
 
 
-  /* ---- Adding one ---- */
+  // Adding one
   function drawAdd() {
     let times = ['08:00'];
     let days = [...EVERY_DAY];
@@ -629,8 +576,7 @@ export function renderMeds(screen, { live }) {
     dose.setAttribute('aria-label', 'Dose, optional');
     form.append(fieldLabel('What it is'), name, dose);
 
-    /* Times of day. A list rather than a count, because three times a day
-       means nothing without knowing which three. */
+    // Times of day.
     form.appendChild(fieldLabel('Times of day'));
     const timeRow = el('div', 'chiprow');
     form.appendChild(timeRow);
@@ -658,8 +604,7 @@ export function renderMeds(screen, { live }) {
     };
     drawTimes();
 
-    /* Which days. Every day is the common case and is the starting point, and
-       the shortcuts below cover most of the rest in one tap. */
+    // Which days.
     form.appendChild(fieldLabel('Which days'));
     const dayRow = el('div', 'daypick');
     form.appendChild(dayRow);
@@ -708,7 +653,7 @@ export function renderMeds(screen, { live }) {
     screen.appendChild(form);
   }
 
-  /* ---- Label check, after the tracking ---- */
+  // Label check, after the tracking
   function drawCompare() {
     const state = {
       a: { ingredient: '', strength: '', form: '', route: '' },
@@ -818,7 +763,7 @@ export function renderMeds(screen, { live }) {
   draw();
 }
 
-/** The nearest dose across every medicine, as a sentence, or null. */
+// The nearest dose across every medicine, as a sentence, or null.
 function nextAcross(list) {
   const soonest = list
     .map(m => nextDose(m))
@@ -831,7 +776,7 @@ function nextAcross(list) {
     : `${days[soonest.date.getDay()]} at ${soonest.time}`;
 }
 
-/* ---------- Labs ---------- */
+// Labs
 export function renderLabs(screen, { live }) {
   const draw = () => {
     screen.replaceChildren();
@@ -870,8 +815,8 @@ export function renderLabs(screen, { live }) {
       line.append(input, el('span', 'lab__range', rangeText));
       box.appendChild(line);
 
-      /* Where the value sits inside the range, because the edges are not the
-         only thing that carries meaning. */
+      // Where the value sits inside the range, because the edges are not the only thing that
+      // carries meaning.
       const scale = el('div', 'labscale');
       const track = el('div', 'labscale__track');
       const marker = el('i', 'labscale__marker');

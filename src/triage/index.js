@@ -1,4 +1,4 @@
-/* Question banks, and how a region finds the right one. */
+// Question banks, and how a region finds the right one.
 
 import { CHEST } from './chest.js';
 import { ABDOMEN } from './abdomen.js';
@@ -8,10 +8,7 @@ import { LIMB } from './limb.js';
 
 export const BANKS = [CHEST, ABDOMEN, BACK, HEAD, LIMB];
 
-/* Anything without a dedicated bank still gets a sensible history rather
-   than nothing. The questions here are the ones that apply wherever it
-   hurts: how it started, what changes it, and whether anything systemic is
-   going on. */
+// Anything without a dedicated bank still gets a sensible history rather than nothing.
 export const GENERIC = {
   id: 'generic',
   regions: [],
@@ -103,7 +100,7 @@ export const GENERIC = {
   ],
 };
 
-/** The bank covering a region id, or the general one. */
+// The bank covering a region id, or the general one.
 export function bankFor(regionId) {
   return BANKS.find(b => b.regions.includes(regionId)) ?? GENERIC;
 }
